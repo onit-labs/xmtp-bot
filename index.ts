@@ -21,7 +21,7 @@ const { WALLET_KEY, ENCRYPTION_KEY, XMTP_ENV } = z
 	.object({
 		WALLET_KEY: z.string(),
 		ENCRYPTION_KEY: z.string(),
-		XMTP_ENV: z.enum(["dev", "prod"]),
+		XMTP_ENV: z.enum(["dev", "production"]),
 	})
 	.parse(process.env);
 
