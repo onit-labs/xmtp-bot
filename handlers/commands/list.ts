@@ -1,16 +1,14 @@
-import type { Client as XmtpClient } from "@xmtp/node-sdk";
-import { Client } from "onit-markets";
-import { getMarkets } from "#helpers/onit.ts";
+import { fallbackMessage } from '#constants.ts';
+import { getMarkets } from '#helpers/onit.ts';
 
-type Conversation = NonNullable<
-	Awaited<ReturnType<XmtpClient["conversations"]["getConversationById"]>>
->;
+import { stripIndents } from 'common-tags';
+import { Client } from 'onit-markets';
 
-export async function handleListCommand(
-	onit: Client,
-	conversation: Conversation,
-	tags: string[] = [],
-) {
+import type { Client as XmtpClient } from '@xmtp/node-sdk';
+
+type Conversation = NonNullable<Awaited<ReturnType<XmtpClient['conversations']['getConversationById']>>>;
+
+export async function handleListCommand(onit: Client, conversation: Conversation, tags: string[] = []) {
 	const marketsResponse = await getMarkets(
 		onit,
 		tags.length > 0
@@ -21,10 +19,11 @@ export async function handleListCommand(
 
 	if (!marketsResponse.success) {
 		return await conversation.send(
-			`Sorry, I encountered an error processing your command. ${marketsResponse.error}
+			stripIndents`
+			Sorry, I encountered an error processing your command. ${marketsResponse.error ?? 'Unknown error'}
 
-              You can find all markets at https://onit.fun/
-              `,
+			${fallbackMessage}
+		`,
 		);
 	}
 
@@ -32,18 +31,26 @@ export async function handleListCommand(
 
 	if (markets.length === 0) {
 		return await conversation.send(
-			`No markets found. You can find all our markets at https://onit.fun/`,
+			stripIndents`
+			No markets found.
+
+			${fallbackMessage}
+		`,
 		);
 	}
 
 	const isSingleTag = tags.length === 1;
 
 	return await conversation.send(
-		`Recent Onit Markets:\n\n${markets.map((market) => market.question).join("\n")}
+		stripIndents`
+			Recent Onit Markets:\n\n
+			${markets.map((market) => market.question).join('\n')}
+
             ${
 							isSingleTag
 								? `\nYou can find all ${tags.at(0)} markets at https://onit.fun/${tags.at(0)}`
 								: `\nYou can find all markets at https://onit.fun/`
-						}`,
+						}
+		`,
 	);
 }

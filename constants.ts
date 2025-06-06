@@ -17,3 +17,11 @@ export const commands = {
 	// 	usage: "/watch [market address] [frequency (all, daily, weekly, monthly)]",
 	// },
 } as const;
+
+export const fallbackMessage =
+	"Available commands:\n\n" +
+	Object.values(commands)
+		.map((c) => `/${c.command} - ${c.description} \neg. ${c.example}`)
+		.join("\n\n") +
+	"\n\n" +
+	"You can find all markets at https://onit.fun/";
