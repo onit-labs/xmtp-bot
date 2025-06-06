@@ -81,27 +81,40 @@ async function main() {
 		const messageContent = message.content as string;
 		const words = messageContent.split(' ');
 		const [firstWord, ...rest] = words;
-		// check if first word is a {command} or /{command}
-		const command =
-			!firstWord ||
-			!Object.values(commands)
-				.map((c) => c.command as string)
-				.includes(firstWord.replace('/', '').toLowerCase())
-				? null
-				: `/${firstWord.toLowerCase().replace('/', '')}`;
 
+		// Extract command and args based on format
+		const { command, args } = (() => {
+			if (firstWord?.toLowerCase() === '@onit') {
+				return {
+					command: rest[0]?.toLowerCase(),
+					args: rest.slice(1)
+				};
+			}
+			if (firstWord?.toLowerCase().startsWith('/')) {
+				return {
+					command: firstWord.toLowerCase().replace('/', ''),
+					args: rest
+				};
+			}
+			return { command: null, args: [] };
+		})();
+
+		// If no command found, ignore the message
+		if (!command) return;
+
+		// Handle the command
 		try {
 			switch (command) {
+				case commands.list.command:
 				case `/${commands.list.command}`: {
-					await handleListCommand(onit, conversation, rest);
+					await handleListCommand(onit, conversation, args);
 					break;
 				}
+				case commands.trending.command:
 				case `/${commands.trending.command}`: {
 					await handleTrendingCommand(onit, conversation);
 					break;
 				}
-				// case "/watch": // get notifications for trades on market, choose frequency etc
-				// 	break;
 				default: {
 					await conversation.send(fallbackMessage);
 					break;
