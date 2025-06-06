@@ -1,0 +1,29 @@
+{
+  "name": "xmtp-bot",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#helpers/*": "./helpers/*"
+  },
+  "scripts": {
+    "start": "bun run index.ts",
+    "generate-keys": "bun run scripts/generate-keys.ts",
+    "dev": "bun --watch index.ts",
+    "build": "bun build index.ts --outdir ./dist"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5",
+    "viem": "^2.30.6"
+  },
+  "dependencies": {
+    "@xmtp/node-sdk": "^2.1.0",
+    "onit-markets": "^0.1.5"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}
