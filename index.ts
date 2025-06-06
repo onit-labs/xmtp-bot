@@ -3,7 +3,9 @@ import { getClient } from "onit-markets";
 import { toBytes } from "viem/utils";
 import { z } from "zod";
 import { createSigner, logAgentDetails } from "#helpers/client.ts";
-import { getMarkets } from "#helpers/onit.ts";
+import { commands } from "./constants";
+import { handleListCommand } from "./handlers/commands/list";
+import { handleTrendingCommand } from "./handlers/commands/trending";
 
 // Initialize the client with your API endpoint
 const onit = getClient("https://markets.onit-labs.workers.dev", {
@@ -82,44 +84,36 @@ async function main() {
 		}
 
 		const messageContent = message.content as string;
-		const command = messageContent.toLowerCase().trim();
+		const words = messageContent.split(" ");
+		const [firstWord, ...rest] = words;
+		// check if first word is a {command} or /{command}
+		const command =
+			!firstWord ||
+			!Object.values(commands)
+				.map((c) => c.command as string)
+				.includes(firstWord.replace("/", "").toLowerCase())
+				? null
+				: `/${firstWord.toLowerCase().replace("/", "")}`;
 
 		try {
 			switch (command) {
-				case "/list": {
-					const marketsResponse = await getMarkets(onit, {
-						tags: ["sports"],
-					});
-
-					if (!marketsResponse.success) {
-						await conversation.send(
-							`Sorry, I encountered an error processing your command. ${marketsResponse.error}
-
-              You can find all markets at https://onit.fun/
-              `,
-						);
-						break;
-					}
-
-					const markets = marketsResponse.data.markets;
-
-					await conversation.send(
-						`\n${markets.map((market) => market.question).join("\n")}`,
-					);
-
+				case `/${commands.list}`: {
+					await handleListCommand(onit, conversation, rest);
 					break;
 				}
 				// case "/watch": // get notifications for trades on market, choose frequency etc
 				// 	break;
-				// case "/trending":
-				// 	break;
+				case `/${commands.trending}`:
+					await handleTrendingCommand(onit, conversation);
+					break;
 				default:
 					await conversation.send(
-						"I am the Onit Bot for interacting with the Onit Prediction Markets her are the available commands:\n" +
-							// "Available commands:\n" +
-							"/list - List all markets\n",
-						//+ "/watch - Watch a market\n" +
-						// "/trending - Trending markets\n",
+						"Available commands:\n\n" +
+							Object.values(commands)
+								.map(
+									(c) => `/${c.command} - ${c.description} \neg. ${c.example}`,
+								)
+								.join("\n\n"),
 					);
 			}
 		} catch (error: unknown) {
