@@ -100,7 +100,7 @@ async function main() {
 		})();
 
 		// If no command found, ignore the message
-		if (!command) return;
+		if (!command) continue;
 
 		// Handle the command
 		try {
