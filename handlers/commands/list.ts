@@ -13,7 +13,7 @@ export async function handleListCommand(onit: Client, conversation: Conversation
 		onit,
 		tags.length > 0
 			? // TODO: sanitize tags
-				{ tags: tags.map((tag) => tag.toLowerCase()) }
+			{ tags: tags.map((tag) => tag.toLowerCase()) }
 			: undefined,
 	);
 
@@ -41,16 +41,11 @@ export async function handleListCommand(onit: Client, conversation: Conversation
 
 	const isSingleTag = tags.length === 1;
 
-	return await conversation.send(
+	await conversation.send(
 		stripIndents`
 			Recent Onit Markets:\n\n
 			${markets.map((market) => market.question).join('\n')}
+		`);
 
-            ${
-							isSingleTag
-								? `\nYou can find all ${tags.at(0)} markets at https://onit.fun/${tags.at(0)}`
-								: `\nYou can find all markets at https://onit.fun/`
-						}
-		`,
-	);
+	await conversation.send(isSingleTag ? `https://onit.fun/c/${tags.at(0)}` : `https://onit.fun/`);
 }
