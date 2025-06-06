@@ -4,7 +4,9 @@
   "type": "module",
   "private": true,
   "imports": {
-    "#helpers/*": "./helpers/*"
+    "#helpers/*": "./helpers/*",
+    "#handlers/*": "./handlers/*",
+    "#constants.ts": "./constants.ts"
   },
   "scripts": {
     "start": "bun run index.ts",
@@ -13,7 +15,8 @@
     "build": "bun build index.ts --outdir ./dist"
   },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "@types/common-tags": "^1.8.4"
   },
   "peerDependencies": {
     "typescript": "^5",
@@ -21,6 +24,7 @@
   },
   "dependencies": {
     "@xmtp/node-sdk": "^2.1.0",
+    "common-tags": "^1.8.2",
     "onit-markets": "^0.1.5",
     "zod": "^3.25.55"
   },

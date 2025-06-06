@@ -19,8 +19,8 @@
 		}
 	},
 	"javascript": {
-		"lineWidth": 120,
 		"formatter": {
+			"lineWidth": 120,
 			"quoteStyle": "single"
 		}
 	},
@@ -32,6 +32,11 @@
 					"level": "on",
 					"options": {
 						"groups": [
+							{
+								"type": false,
+								"source": ["#*/**", "#*.ts"]
+							},
+							":BLANK_LINE:",
 							{
 								"type": false
 							},
