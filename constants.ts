@@ -13,10 +13,16 @@ export const commands = {
 	},
 	positions: {
 		command: "positions",
-		description: "List all your positions",
-		usage: "/positions",
-		example: "/positions",
+		description: "List your positions, or pass someone's basename",
+		usage: "/positions [basename]",
+		example: "/positions @jamco1",
 	},
+	copy: {
+		command: "copy",
+		description: "Deploy a private market for your group",
+		usage: "1) Call /list to see available markets\n2) Call /copy [market number]",
+		example: "\n1) Call /list to see available markets\n2) Call /copy [market number]",
+	}
 	// watch: {
 	// 	command: "watch",
 	// 	description: "Get notifications for market activity",

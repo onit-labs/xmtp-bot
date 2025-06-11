@@ -27,8 +27,13 @@ export async function handleTrendingCommand(onit: Client, conversation: Conversa
 		return await conversation.send(`No markets found. You can find all our markets at https://onit.fun/`);
 	}
 
-	return await conversation.send(
-		`Trending Onit Markets:\n\n${markets.map((market) => market.question).join('\n')}
-            \nYou can find all trending markets at https://onit.fun`,
-	);
+	await conversation.send(
+		stripIndents`
+		Trending Onit Markets:\n\n
+		${markets.map((market, index) => `${index + 1}. ${market.question}`).join('\n')}
+
+		Market Addresses:[${markets.map((market) => market.marketAddress).join(' ,')}]
+		`);
+
+	return await conversation.send(`https://onit.fun`);
 }
