@@ -1,6 +1,6 @@
-import { createDiscreteMarketSchema } from "./validators/market/create";
-import { createDaysUntilMarketSchema } from "./validators/market/create";
-import { createNormalMarketSchema, createPercentageMarketSchema, createScoreMarketSchema } from "./validators/market/create";
+import { createDiscreteMarketSchema } from "../helpers/validators/market/create";
+import { createDaysUntilMarketSchema } from "../helpers/validators/market/create";
+import { createNormalMarketSchema, createPercentageMarketSchema, createScoreMarketSchema } from "../helpers/validators/market/create";
 
 export const validateMarket = (marketData: any) => {
     let validatedMarket;

@@ -1,6 +1,6 @@
 import { fallbackMessage } from '#constants.ts';
 import { getPositions } from '#helpers/onit.ts';
-import { resolveBasenameToAddress } from '#helpers/basename.ts';
+import { basenameToAddress } from '../../utils/basename-to-address';
 
 import { stripIndents } from 'common-tags';
 import { Client } from 'onit-markets';
@@ -31,8 +31,7 @@ export async function handlePositionsCommand(onit: Client, conversation: Convers
             }
 
             // Resolve the basename to an address
-            const resolvedAddress = await resolveBasenameToAddress(basename);
-            console.log({ resolvedAddress })
+            const resolvedAddress = await basenameToAddress(basename);
 
             if (!resolvedAddress) {
                 return await conversation.send(

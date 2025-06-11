@@ -23,7 +23,7 @@ const publicClient = createPublicClient({
  * @param basename The Basename to resolve (e.g. "jamco1.base.eth")
  * @returns The resolved Ethereum address or null if not found
  */
-export async function resolveBasenameToAddress(basename: string): Promise<Address | null> {
+export async function basenameToAddress(basename: string): Promise<Address | null> {
     try {
         const normalizedBasename = basename.toLowerCase().endsWith('.base.eth')
             ? basename.toLowerCase()
