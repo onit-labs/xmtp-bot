@@ -79,3 +79,19 @@ export const getPositions = async (onit: Client, userAddress: Address) => {
 			};
 		};
 };
+
+export const postMarket = async (onit: Client, market: any) => {
+	const marketResponse = await onit.api.markets.$post({
+		json: market,
+	});
+	return (await marketResponse.json()) as unknown as {
+		success: false;
+		error: string;
+	} | {
+		success: true;
+		data: {
+			marketAddress: `0x${string}`;
+			txHash: `0x${string}`;
+		};
+	};
+};

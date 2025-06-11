@@ -2,15 +2,18 @@ import { fallbackMessage } from '#constants.ts';
 import { stripIndents } from 'common-tags';
 import { Client } from 'onit-markets';
 import type { Client as XmtpClient } from '@xmtp/node-sdk';
-import { getMarket } from '#helpers/onit.ts';
+import { getMarket, postMarket } from '#helpers/onit.ts';
 import { isAddress } from 'viem';
+import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
+import { generateInitialBet } from '../../utils/dummy-bets';
+import { validateMarket } from '../../utils/validate-market';
+import { predictMarketAddress } from '../../utils/predict-market-address';
+import { checkAddressExists } from '../../utils/check-address-exists';
 import SuperJSON from 'superjson';
-import { generateInitialBet } from '#helpers/dummy-bets.ts';
-import { validateMarket } from '#helpers/validate-market.ts';
 
 type Conversation = NonNullable<Awaited<ReturnType<XmtpClient['conversations']['getConversationById']>>>;
 
-export async function handleCopyCommand(onit: Client, conversation: Conversation, marketNumber: string) {
+export async function handleCopyCommand(onit: Client, conversation: Conversation, marketNumber: string, initiator: string) {
     // Get the last message from the conversation
     const messages = await conversation.messages();
     const lastMessage = messages[messages.length - 3]; // Most recent message
@@ -85,7 +88,6 @@ export async function handleCopyCommand(onit: Client, conversation: Conversation
     const marketData = {
         ...marketToCopy,
         question: marketToCopy.questionTitle,
-        bettingCutoff: 99n, // TODO NEEDS updated
         metadata: {
             ...marketToCopy.metadata,
             tags: [...(marketToCopy.metadata?.tags ?? []), '__PRIVATE']
@@ -93,6 +95,29 @@ export async function handleCopyCommand(onit: Client, conversation: Conversation
         // todo handle outcome unit
         initialBet: generateInitialBet(marketToCopy.marketType)
     };
+
+    const predictedCopiedMarketAddress = predictMarketAddress({
+        initiator: initiator as `0x${string}`,
+        bettingCutoff: marketToCopy.bettingCutoff,
+        question: marketToCopy.questionTitle,
+    });
+
+    const addressExists = await checkAddressExists(predictedCopiedMarketAddress);
+
+    /**
+     * The salt used by the factory uses the question, betting cutoff, and initiator address.
+     * If this initiator has already deployed a market with this question and betting cutoff,
+     * then we need to use some other random address for the bet
+     * 
+     * This is not ideal, but an acceptable step to ensure we can always deploy a copy
+     */
+    if (addressExists) {
+        const privateKey = generatePrivateKey();
+        const randomAccount = privateKeyToAccount(privateKey);
+        marketData.initiator = randomAccount.address;
+    } else {
+        marketData.initiator = initiator as `0x${string}`;
+    }
 
     // Validate the market data based on its type
     const validatedMarket = validateMarket(marketData);
@@ -105,22 +130,20 @@ export async function handleCopyCommand(onit: Client, conversation: Conversation
                 `,
         );
     }
-    console.log({ validatedMarket })
 
-    const createResponse = await onit.api.markets.$post({
-        json: JSON.parse(SuperJSON.stringify(validatedMarket))
-    });
+    const data = await postMarket(onit, JSON.parse(SuperJSON.stringify(validatedMarket)));
 
-    if (!createResponse.success) {
+    if (!data.success) {
         return await conversation.send(
             stripIndents`
-            Sorry, I encountered an error copying the market. ${createResponse.error ?? 'Unknown error'}
+            Sorry, I encountered an error copying the market.'}
 
             ${fallbackMessage}
             `,
         );
     }
 
-    const newMarket = createResponse.data;
-    await conversation.send(`Market copied successfully! View it here: https://onit.fun/m/${newMarket.id}`);
+    const newMarket = data.data.marketAddress;
+    await conversation.send(`We're deploying your groups private prediction market! View it here:`);
+    await conversation.send(`https://onit.fun/m/${newMarket}`);
 } 

@@ -128,7 +128,7 @@ async function main() {
 						await conversation.send('Please specify a market number to copy. Example: /copy 1');
 						break;
 					}
-					await handleCopyCommand(onit, conversation, args[0]);
+					await handleCopyCommand(onit, conversation, args[0], memberAddress);
 					break;
 				}
 				default: {
