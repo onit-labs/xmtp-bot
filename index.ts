@@ -2,6 +2,7 @@ import { commands, fallbackMessage } from '#constants.ts';
 import { handleListCommand } from '#handlers/commands/list.ts';
 import { handlePositionsCommand } from '#handlers/commands/positions.ts';
 import { handleTrendingCommand } from '#handlers/commands/trending.ts';
+import { handleCopyCommand } from '#handlers/commands/copy.ts';
 import { createSigner, logAgentDetails } from '#helpers/client.ts';
 
 import { Client, type XmtpEnv } from '@xmtp/node-sdk';
@@ -119,6 +120,15 @@ async function main() {
 				case commands.positions.command:
 				case `/${commands.positions.command}`: {
 					await handlePositionsCommand(onit, conversation, client, message.senderInboxId, args);
+					break;
+				}
+				case 'copy':
+				case '/copy': {
+					if (!args[0]) {
+						await conversation.send('Please specify a market number to copy. Example: /copy 1');
+						break;
+					}
+					await handleCopyCommand(onit, conversation, args[0]);
 					break;
 				}
 				default: {

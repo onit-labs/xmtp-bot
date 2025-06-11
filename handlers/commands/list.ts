@@ -44,7 +44,9 @@ export async function handleListCommand(onit: Client, conversation: Conversation
 	await conversation.send(
 		stripIndents`
 			Recent Onit Markets:\n\n
-			${markets.map((market) => market.question).join('\n')}
+			${markets.map((market, index) => `${index + 1}. ${market.question}`).join('\n')}
+
+			Market Addresses:[${markets.map((market) => market.marketAddress).join(' ,')}]
 		`);
 
 	await conversation.send(isSingleTag ? `https://onit.fun/c/${tags.at(0)}` : `https://onit.fun/`);

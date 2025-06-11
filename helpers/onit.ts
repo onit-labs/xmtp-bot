@@ -45,6 +45,21 @@ export async function getMarkets(
 		};
 }
 
+export const getMarket = async (onit: Client, marketAddress: Address) => {
+	const marketResponse = await onit.api.markets[":address"].$get({
+		param: {
+			address: marketAddress,
+		},
+	});
+	return (await marketResponse.json()) as unknown as {
+		success: false;
+		error: string;
+	} | {
+		success: true;
+		data: any;
+	};
+}
+
 export const getPositions = async (onit: Client, userAddress: Address) => {
 	// TODO update client for correct type - users is fine here
 	const positionsResponse = await onit.api.users[":address"].predictions.$get({
