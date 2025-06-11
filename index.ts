@@ -118,7 +118,7 @@ async function main() {
 				}
 				case commands.positions.command:
 				case `/${commands.positions.command}`: {
-					await handlePositionsCommand(onit, conversation, client, message.senderInboxId);
+					await handlePositionsCommand(onit, conversation, client, message.senderInboxId, args);
 					break;
 				}
 				default: {

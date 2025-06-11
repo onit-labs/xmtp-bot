@@ -1,37 +1,78 @@
 import { fallbackMessage } from '#constants.ts';
 import { getPositions } from '#helpers/onit.ts';
+import { resolveBasenameToAddress } from '#helpers/basename.ts';
 
 import { stripIndents } from 'common-tags';
 import { Client } from 'onit-markets';
 
 import type { Client as XmtpClient } from '@xmtp/node-sdk';
+import { isAddress } from 'viem';
 
-type Conversation = NonNullable<Awaited<ReturnType<XmtpClient['conversations']['getConversationById']>>>;
+type ConversationType = NonNullable<Awaited<ReturnType<XmtpClient['conversations']['getConversationById']>>>;
 
-export async function handlePositionsCommand(onit: Client, conversation: Conversation, client: XmtpClient, senderInboxId: string) {
-    // TESTING
-    const inboxState = await client.preferences.inboxStateFromInboxIds([senderInboxId]);
-    const memberAddress = '0x640Ac7F7B96C72653d2F1161dBBAD3B7B7d81a23' // inboxState[0]?.identifiers[0]?.identifier;
+export async function handlePositionsCommand(onit: Client, conversation: ConversationType, client: XmtpClient, senderInboxId: string, args: string[] = []) {
+    let targetAddress: string | undefined;
 
-    if (!memberAddress) {
+    if (args.length > 0) {
+        if (isAddress(args[0] ?? '')) {
+            targetAddress = args[0] ?? '';
+        } else {
+            // If a basename is provided, we need to look up their address
+            const basename = args[0]?.toLowerCase();
+
+            if (!basename) {
+                return await conversation.send(
+                    stripIndents`
+                Please provide a valid Basename.
+
+                ${fallbackMessage}
+                `,
+                );
+            }
+
+            // Resolve the basename to an address
+            const resolvedAddress = await resolveBasenameToAddress(basename);
+            console.log({ resolvedAddress })
+
+            if (!resolvedAddress) {
+                return await conversation.send(
+                    stripIndents`
+                Sorry, I couldn't find a user with that Basename.
+
+                ${fallbackMessage}
+                `,
+                );
+            }
+
+            targetAddress = resolvedAddress;
+        }
+    } else {
+        // Get the sender's address
+        const inboxState = await client.preferences.inboxStateFromInboxIds([senderInboxId]);
+        targetAddress = inboxState[0]?.identifiers[0]?.identifier;
+    }
+
+    console.log({ targetAddress });
+
+    if (!targetAddress) {
         return await conversation.send(
             stripIndents`
-      Sorry, I couldn't find your wallet address.
+            Sorry, I couldn't find the wallet address.
 
-      ${fallbackMessage}
-    `,
+            ${fallbackMessage}
+            `,
         );
     }
 
-    const predictionsResponse = await getPositions(onit, memberAddress as `0x${string}`);
+    const predictionsResponse = await getPositions(onit, targetAddress as `0x${string}`);
 
     if (!predictionsResponse.success) {
         return await conversation.send(
             stripIndents`
-      Sorry, I encountered an error processing your command. ${predictionsResponse.error ?? 'Unknown error'}
+            Sorry, I encountered an error processing your command. ${predictionsResponse.error ?? 'Unknown error'}
 
-      ${fallbackMessage}
-    `,
+            ${fallbackMessage}
+            `,
         );
     }
 
@@ -40,19 +81,13 @@ export async function handlePositionsCommand(onit: Client, conversation: Convers
     if (predictions.length === 0) {
         return await conversation.send(
             stripIndents`
-      You don't have any active positions.
+            No positions found for ${targetAddress}.
 
-      ${fallbackMessage}
-    `,
+            ${fallbackMessage}
+            `,
         );
     }
 
-    // await conversation.send(
-    //     stripIndents`
-    //   Your Active Positions:\n\n
-    //   ${predictions.map((market: { question: string }) => market.question).join('\n')}
-    // `);
-
-    await conversation.send(`Check out your Onit positions!`);
-    await conversation.send(`https://onit.fun/u/${memberAddress}`);
+    await conversation.send(`Check out the Onit positions!`);
+    await conversation.send(`https://onit.fun/u/${targetAddress}`);
 } 
