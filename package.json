@@ -6,7 +6,8 @@
   "imports": {
     "#helpers/*": "./helpers/*",
     "#handlers/*": "./handlers/*",
-    "#constants.ts": "./constants.ts"
+    "#constants.ts": "./constants.ts",
+    "#validators/*": "./validators/*"
   },
   "scripts": {
     "start": "bun run index.ts",
