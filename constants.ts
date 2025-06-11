@@ -3,13 +3,19 @@ export const commands = {
 		command: "list",
 		description: "List all markets",
 		usage: "/list [tag]",
-		example: "/list sports",
+		example: "/list sport",
 	},
 	trending: {
 		command: "trending",
 		description: "List all trending markets",
 		usage: "/trending",
 		example: "/trending",
+	},
+	positions: {
+		command: "positions",
+		description: "List all your positions",
+		usage: "/positions",
+		example: "/positions",
 	},
 	// watch: {
 	// 	command: "watch",
