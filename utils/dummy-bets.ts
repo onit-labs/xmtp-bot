@@ -3,8 +3,8 @@ export function generateInitialBet(market: any): any {
     switch (market.marketType) {
         case 'normal':
             return {
-                mean: 50,
-                stdDev: 10,
+                mean: 10 * (market.outcomeUnit ?? 1),
+                stdDev: 5 * (market.outcomeUnit ?? 1),
                 outcomeUnit: market.outcomeUnit ?? 1
             };
         case 'percentage':
