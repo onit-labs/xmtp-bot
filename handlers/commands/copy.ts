@@ -103,7 +103,7 @@ export async function handleCopyCommand(onit: Client, conversation: Conversation
 
     const predictedCopiedMarketAddress = predictMarketAddress({
         initiator: initiator as `0x${string}`,
-        bettingCutoff: marketToCopy.bettingCutoff,
+        bettingCutoff: 0n, // marketToCopy.bettingCutoff, TODO better logic here to avoid deploying markets that ended in the past
         question: marketToCopy.questionTitle,
     });
 
