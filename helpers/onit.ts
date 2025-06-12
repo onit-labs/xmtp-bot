@@ -1,6 +1,9 @@
 import type { Client } from "onit-markets";
 import { Address } from "viem";
 
+export const PRIVATE_MARKET_TAG = '__PRIVATE';
+export const XMTP_MARKET_TAG = '__XMTP';
+
 export async function getMarkets(
 	onit: Client,
 	filters?: {

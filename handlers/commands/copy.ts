@@ -2,7 +2,7 @@ import { fallbackMessage } from '#constants.ts';
 import { stripIndents } from 'common-tags';
 import { Client } from 'onit-markets';
 import type { Client as XmtpClient } from '@xmtp/node-sdk';
-import { getMarket, postMarket } from '#helpers/onit.ts';
+import { getMarket, postMarket, PRIVATE_MARKET_TAG, XMTP_MARKET_TAG } from '#helpers/onit.ts';
 import { isAddress } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
 import { generateInitialBet } from '../../utils/dummy-bets';
@@ -93,8 +93,8 @@ export async function handleCopyCommand(onit: Client, conversation: Conversation
             tags: [
                 // Never make the private market trending
                 ...(marketToCopy.metadata?.tags ?? []).filter((tag: string) => tag !== 'Trending'),
-                '__PRIVATE',
-                `xmtp-${conversation.id.toString()}`
+                PRIVATE_MARKET_TAG,
+                `${XMTP_MARKET_TAG}_${conversation.id.toString()}`
             ]
         },
         // todo handle outcome unit

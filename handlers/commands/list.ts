@@ -1,5 +1,5 @@
 import { fallbackMessage } from '#constants.ts';
-import { getMarkets } from '#helpers/onit.ts';
+import { getMarkets, XMTP_MARKET_TAG } from '#helpers/onit.ts';
 
 import { stripIndents } from 'common-tags';
 import { Client } from 'onit-markets';
@@ -11,7 +11,7 @@ type Conversation = NonNullable<Awaited<ReturnType<XmtpClient['conversations']['
 export async function handleListCommand(onit: Client, conversation: Conversation, tags: string[] = []) {
 	// If the first tag is 'private', add the conversation ID as a tag
 	if (tags[0]?.toLowerCase() === 'private') {
-		tags = [`xmtp-${conversation.id.toString()}`];
+		tags = [`${XMTP_MARKET_TAG}_${conversation.id.toString()}`];
 	} else if (tags[0]?.toLowerCase() === 'trending') {
 		tags = ['trending'];
 	}
@@ -20,7 +20,7 @@ export async function handleListCommand(onit: Client, conversation: Conversation
 		onit,
 		tags.length > 0
 			? // TODO: sanitize tags
-			{ tags: tags.map((tag) => tag.toLowerCase()) }
+			{ tags }
 			: undefined,
 	);
 
