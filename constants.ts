@@ -2,26 +2,26 @@ export const commands = {
 	list: {
 		command: "list",
 		description: "List all markets",
-		usage: "/list [tag]",
-		example: "/list sport",
+		usage: "@onit list [tag]",
+		example: "@onit list sport",
 	},
 	trending: {
 		command: "trending",
 		description: "List all trending markets",
-		usage: "/trending",
-		example: "/trending",
+		usage: "@onit trending",
+		example: "@onit trending",
 	},
 	bets: {
 		command: "bets",
 		description: "List your own bets, or pass someone's basename",
-		usage: "/bets [basename]",
-		example: "/bets @jamco1",
+		usage: "@onit bets [basename]",
+		example: "@onit bets @jamco1",
 	},
 	copy: {
 		command: "copy",
 		description: "Deploy a private market for your group",
-		usage: "1) Call /list to see available markets\n2) Call /copy [market number]",
-		example: "\n1) Call /list to see available markets\n2) Call /copy [market number]",
+		usage: "1) Call '@onit list' to see available markets\n2) Call '@onit copy [market number]'",
+		example: "\n1) Call '@onit list' to see available markets\n2) Call '@onit copy [market number]'",
 	}
 	// watch: {
 	// 	command: "watch",
