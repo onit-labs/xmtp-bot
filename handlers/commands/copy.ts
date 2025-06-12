@@ -100,6 +100,7 @@ export async function handleCopyCommand(onit: Client, conversation: Conversation
         bettingCutoff: 0n, // marketToCopy.betCutoff, TODO better logic here to avoid deploying markets that ended in the past
         initialBet: generateInitialBet(marketToCopy)
     };
+    console.log({ marketData })
 
     const predictedCopiedMarketAddress = predictMarketAddress({
         initiator: initiator as `0x${string}`,
@@ -126,6 +127,7 @@ export async function handleCopyCommand(onit: Client, conversation: Conversation
 
     // Validate the market data based on its type
     const validatedMarket = validateMarket(marketData);
+    console.log({ validatedMarket })
     if (!validatedMarket) {
         return await conversation.send(
             stripIndents`
@@ -139,6 +141,7 @@ export async function handleCopyCommand(onit: Client, conversation: Conversation
     const data = await postMarket(onit, JSON.parse(SuperJSON.stringify(validatedMarket)));
 
     if (!data.success) {
+        console.log({ data: JSON.stringify(data.error) })
         return await conversation.send(
             stripIndents`
             Sorry, I encountered an error copying the market.'}
