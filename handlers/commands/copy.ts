@@ -97,7 +97,7 @@ export async function handleCopyCommand(onit: Client, conversation: Conversation
                 `${XMTP_MARKET_TAG}_${conversation.id.toString()}`
             ]
         },
-        outcomeUnit: marketToCopy.outcomeUnit ?? 1,
+        bettingCutoff: 0n, // marketToCopy.betCutoff, TODO better logic here to avoid deploying markets that ended in the past
         initialBet: generateInitialBet(marketToCopy)
     };
 
