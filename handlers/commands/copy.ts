@@ -97,8 +97,8 @@ export async function handleCopyCommand(onit: Client, conversation: Conversation
                 `${XMTP_MARKET_TAG}_${conversation.id.toString()}`
             ]
         },
-        // todo handle outcome unit
-        initialBet: generateInitialBet(marketToCopy.marketType)
+        outcomeUnit: marketToCopy.outcomeUnit ?? 1,
+        initialBet: generateInitialBet(marketToCopy)
     };
 
     const predictedCopiedMarketAddress = predictMarketAddress({

@@ -1,10 +1,11 @@
-export function generateInitialBet(marketType: string): any {
-    switch (marketType) {
+
+export function generateInitialBet(market: any): any {
+    switch (market.marketType) {
         case 'normal':
             return {
                 mean: 50,
                 stdDev: 10,
-                outcomeUnit: 1
+                outcomeUnit: market.outcomeUnit ?? 1
             };
         case 'percentage':
             return {
@@ -22,10 +23,8 @@ export function generateInitialBet(marketType: string): any {
                 to: "40"
             };
         case 'discrete':
-            return {
-                options: ['Yes', 'No']
-            };
+            return [market.metadata.options[0].id];
         default:
-            throw new Error(`Unknown market type: ${marketType}`);
+            throw new Error(`Unknown market type: ${market.marketType}`);
     }
 }

@@ -53,7 +53,7 @@ export async function handleListCommand(onit: Client, conversation: Conversation
 	await conversation.send(
 		stripIndents`
 			${tags[0]?.toLowerCase() === 'trending' ? 'Trending Onit Markets:' :
-				tags[0]?.toLowerCase().includes('xmtp-') ? 'Your group\'s private markets:' :
+				tags[0]?.toLowerCase().includes(`${XMTP_MARKET_TAG.toLowerCase()}_`) ? 'Your group\'s private markets:' :
 					'Recent Onit Markets:'}
 			\n
 			${markets.map((market, index) => `${index + 1}. ${market.question}`).join('\n')}
