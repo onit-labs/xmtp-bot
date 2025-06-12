@@ -1,5 +1,5 @@
 import { fallbackMessage } from '#constants.ts';
-import { getPositions } from '#helpers/onit.ts';
+import { getBets } from '#helpers/onit.ts';
 import { basenameToAddress } from '../../utils/basename-to-address';
 
 import { stripIndents } from 'common-tags';
@@ -10,7 +10,7 @@ import { isAddress } from 'viem';
 
 type ConversationType = NonNullable<Awaited<ReturnType<XmtpClient['conversations']['getConversationById']>>>;
 
-export async function handlePositionsCommand(onit: Client, conversation: ConversationType, client: XmtpClient, senderInboxId: string, args: string[] = []) {
+export async function handleBetsCommand(onit: Client, conversation: ConversationType, client: XmtpClient, senderInboxId: string, args: string[] = []) {
     let targetAddress: string | undefined;
 
     if (args.length > 0) {
@@ -63,7 +63,7 @@ export async function handlePositionsCommand(onit: Client, conversation: Convers
         );
     }
 
-    const predictionsResponse = await getPositions(onit, targetAddress as `0x${string}`);
+    const predictionsResponse = await getBets(onit, targetAddress as `0x${string}`);
 
     if (!predictionsResponse.success) {
         return await conversation.send(
@@ -80,13 +80,13 @@ export async function handlePositionsCommand(onit: Client, conversation: Convers
     if (predictions.length === 0) {
         return await conversation.send(
             stripIndents`
-            No positions found for ${targetAddress}.
+            No bets found for ${targetAddress}.
 
             ${fallbackMessage}
             `,
         );
     }
 
-    await conversation.send(`Check out the Onit positions!`);
+    await conversation.send(`Check out these Onit bets!`);
     await conversation.send(`https://onit.fun/u/${targetAddress}`);
 } 

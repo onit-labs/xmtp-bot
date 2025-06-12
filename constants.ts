@@ -11,11 +11,11 @@ export const commands = {
 		usage: "/trending",
 		example: "/trending",
 	},
-	positions: {
-		command: "positions",
-		description: "List your positions, or pass someone's basename",
-		usage: "/positions [basename]",
-		example: "/positions @jamco1",
+	bets: {
+		command: "bets",
+		description: "List your own bets, or pass someone's basename",
+		usage: "/bets [basename]",
+		example: "/bets @jamco1",
 	},
 	copy: {
 		command: "copy",
