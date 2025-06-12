@@ -90,7 +90,12 @@ export async function handleCopyCommand(onit: Client, conversation: Conversation
         question: marketToCopy.questionTitle,
         metadata: {
             ...marketToCopy.metadata,
-            tags: [...(marketToCopy.metadata?.tags ?? []), '__PRIVATE']
+            tags: [
+                // Never make the private market trending
+                ...(marketToCopy.metadata?.tags ?? []).filter((tag: string) => tag !== 'Trending'),
+                '__PRIVATE',
+                `xmtp-${conversation.id.toString()}`
+            ]
         },
         // todo handle outcome unit
         initialBet: generateInitialBet(marketToCopy.marketType)

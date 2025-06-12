@@ -1,7 +1,6 @@
 import { commands, fallbackMessage } from '#constants.ts';
 import { handleListCommand } from '#handlers/commands/list.ts';
 import { handleBetsCommand } from '#handlers/commands/bets.ts';
-import { handleTrendingCommand } from '#handlers/commands/trending.ts';
 import { handleCopyCommand } from '#handlers/commands/copy.ts';
 import { createSigner, logAgentDetails } from '#helpers/client.ts';
 
@@ -110,11 +109,6 @@ async function main() {
 				case commands.list.command:
 				case `/${commands.list.command}`: {
 					await handleListCommand(onit, conversation, args);
-					break;
-				}
-				case commands.trending.command:
-				case `/${commands.trending.command}`: {
-					await handleTrendingCommand(onit, conversation);
 					break;
 				}
 				case commands.bets.command:

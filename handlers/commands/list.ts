@@ -9,6 +9,13 @@ import type { Client as XmtpClient } from '@xmtp/node-sdk';
 type Conversation = NonNullable<Awaited<ReturnType<XmtpClient['conversations']['getConversationById']>>>;
 
 export async function handleListCommand(onit: Client, conversation: Conversation, tags: string[] = []) {
+	// If the first tag is 'private', add the conversation ID as a tag
+	if (tags[0]?.toLowerCase() === 'private') {
+		tags = [`xmtp-${conversation.id.toString()}`];
+	} else if (tags[0]?.toLowerCase() === 'trending') {
+		tags = ['trending'];
+	}
+
 	const marketsResponse = await getMarkets(
 		onit,
 		tags.length > 0
@@ -41,9 +48,14 @@ export async function handleListCommand(onit: Client, conversation: Conversation
 
 	const isSingleTag = tags.length === 1;
 
+	console.log({ tags })
+
 	await conversation.send(
 		stripIndents`
-			Recent Onit Markets:\n\n
+			${tags[0]?.toLowerCase() === 'trending' ? 'Trending Onit Markets:' :
+				tags[0]?.toLowerCase().includes('xmtp-') ? 'Your group\'s private markets:' :
+					'Recent Onit Markets:'}
+			\n
 			${markets.map((market, index) => `${index + 1}. ${market.question}`).join('\n')}
 
 			Market Addresses:[${markets.map((market) => market.marketAddress).join(' ,')}]
