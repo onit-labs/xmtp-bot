@@ -14,8 +14,8 @@ export function generateInitialBet(market: any): any {
             };
         case 'score':
             return {
-                firstSideScore: "0",
-                secondSideScore: "0"
+                firstSideScore: 0,
+                secondSideScore: 0
             };
         case 'days-until':
             return {
