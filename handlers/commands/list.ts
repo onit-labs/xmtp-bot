@@ -1,4 +1,4 @@
-import { fallbackMessage } from '#constants.ts';
+import { fallbackMessage } from '../../constants/commands';
 import { getMarkets, XMTP_MARKET_TAG } from '#helpers/onit.ts';
 
 import { stripIndents } from 'common-tags';

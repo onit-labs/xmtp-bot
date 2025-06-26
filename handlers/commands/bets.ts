@@ -1,4 +1,4 @@
-import { fallbackMessage } from '#constants.ts';
+import { fallbackMessage } from '../../constants/commands';
 import { getBets } from '#helpers/onit.ts';
 import { basenameToAddress } from '../../utils/basename-to-address';
 

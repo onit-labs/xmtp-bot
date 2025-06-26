@@ -1,4 +1,4 @@
-import { fallbackMessage } from '#constants.ts';
+import { fallbackMessage } from '../../constants/commands';
 import { stripIndents } from 'common-tags';
 import { Client } from 'onit-markets';
 import type { Client as XmtpClient } from '@xmtp/node-sdk';

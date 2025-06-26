@@ -1,5 +1,6 @@
 import type { Client } from "onit-markets";
 import { Address } from "viem";
+import { API_URL } from "../constants/index.ts";
 
 export const PRIVATE_MARKET_TAG = '__PRIVATE';
 export const XMTP_MARKET_TAG = '__XMTP';
@@ -95,6 +96,27 @@ export const postMarket = async (onit: Client, market: any) => {
 		data: {
 			marketAddress: `0x${string}`;
 			txHash: `0x${string}`;
+		};
+	};
+};
+
+export const callBot = async (message: string) => {
+	const response = await fetch(`${API_URL}/bot/test12355/message`, {
+		method: 'POST',
+		headers: {
+			'Content-Type': 'application/json',
+		},
+		body: JSON.stringify({
+			prompt: message,
+		}),
+	});
+	return (await response.json()) as unknown as {
+		success: false;
+		error: string;
+	} | {
+		success: true;
+		data: {
+			modelResponse: string;
 		};
 	};
 };
