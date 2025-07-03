@@ -6,9 +6,12 @@
   "imports": {
     "#helpers/*": "./helpers/*",
     "#handlers/*": "./handlers/*",
-    "#constants.ts": "./constants.ts",
+    "#clients/*": "./clients/*",
+    "#constants.ts": "./constants/index.ts",
+    "#constants/*": "./constants/*",
     "#types.ts": "./types.ts",
-    "#validators/*": "./validators/*"
+    "#utils/*": "./utils/*",
+    "#validators/*": "./helpers/validators/*"
   },
   "scripts": {
     "start": "bun run index.ts",

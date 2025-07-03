@@ -15,11 +15,13 @@ if (typeof process !== 'undefined') {
 	process.on('SIGINT', () => {
 		console?.log('Shutting down WebSocket connection pool...');
 		wsPool.destroy();
+		process.exit(0);
 	});
 
 	process.on('SIGTERM', () => {
 		console?.log('Shutting down WebSocket connection pool...');
 		wsPool.destroy();
+		process.exit(0);
 	});
 }
 

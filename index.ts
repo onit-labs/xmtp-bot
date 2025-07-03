@@ -1,8 +1,9 @@
+import { createSigner, logAgentDetails } from '#clients/xmtp.ts';
+import { ENCRYPTION_KEY, WALLET_KEY, XMTP_ENV } from '#constants.ts';
+import { handleMessage } from '#handlers/handleMessage.ts';
+
 import { Client, type XmtpEnv } from '@xmtp/node-sdk';
 import { toBytes } from 'viem/utils';
-import { WALLET_KEY, ENCRYPTION_KEY, XMTP_ENV } from './constants';
-import { createSigner, logAgentDetails } from './clients/xmtp';
-import { handleMessage } from './handlers/handleMessage';
 
 /**
 * Initialize the XMTP client.

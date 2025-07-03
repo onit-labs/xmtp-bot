@@ -1,12 +1,12 @@
+import { onitClient } from '#clients/onit.ts';
+import { commands, fallbackMessage } from '#constants/commands.ts';
+import { ONIT_TRIGGERS } from '#constants.ts';
+import { handleBetsCommand } from '#handlers/commands/bets.ts';
+import { handleCopyCommand } from '#handlers/commands/copy.ts';
+import { handleListCommand } from '#handlers/commands/list.ts';
 import { callBot } from '#helpers/onit.ts';
 
 import { Client, type DecodedMessage } from '@xmtp/node-sdk';
-import { onitClient } from '../clients/onit.ts';
-import { commands, fallbackMessage } from '../constants/commands.ts';
-import { ONIT_TRIGGERS } from '../constants/index.ts';
-import { handleBetsCommand } from './commands/bets';
-import { handleCopyCommand } from './commands/copy';
-import { handleListCommand } from './commands/list';
 
 import type { Client as XmtpClient } from '@xmtp/node-sdk';
 import type { XmtpConversation } from '#types.ts';

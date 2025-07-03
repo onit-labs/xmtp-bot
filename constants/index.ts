@@ -10,7 +10,15 @@ const envSchema = z.object({
 });
 
 /* Parse and export environment variables */
-export const ENV = envSchema.parse(process.env);
+export let ENV: z.infer<typeof envSchema>;
+try {
+	ENV = envSchema.parse(process.env);
+} catch (error) {
+	// try again but first load dotenv
+	await import('dotenv').then((dotenv) => dotenv.config());
+
+	ENV = envSchema.parse(process.env);
+}
 
 /* Derived constants */
 export const API_URL = process.env.NODE_ENV === 'production' ? ENV.ONIT_API_URL : 'http://localhost:8787';

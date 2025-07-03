@@ -1,17 +1,17 @@
-import { z } from "zod";
-import { daysUntilBetSchema } from "../bet/days-until";
-import { discreteBetSchema } from "../bet/discrete";
-import { normalBetSchema } from "../bet/normal";
-import { percentageBetSchema } from "../bet/percentage";
-import { scoreBetSchema } from "../bet/score";
+import { type Address, isAddress } from 'viem';
+import { z } from 'zod';
+import { daysUntilBetSchema } from '../bet/days-until.ts';
+import { discreteBetSchema } from '../bet/discrete.ts';
+import { normalBetSchema } from '../bet/normal.ts';
+import { percentageBetSchema } from '../bet/percentage.ts';
+import { scoreBetSchema } from '../bet/score.ts';
 import {
-  daysUntilMarketMetadataSchema,
-  discreteMarketMetadataSchema,
-  normalMarketMetadataSchema,
-  percentageMarketMetadataSchema,
-  scoreMarketMetadataSchema,
-} from "./metadata";
-import { Address, isAddress } from "viem";
+	daysUntilMarketMetadataSchema,
+	discreteMarketMetadataSchema,
+	normalMarketMetadataSchema,
+	percentageMarketMetadataSchema,
+	scoreMarketMetadataSchema,
+} from './metadata.ts';
 
 export const addressSchema = z.string().refine((val): val is Address => isAddress(val));
 

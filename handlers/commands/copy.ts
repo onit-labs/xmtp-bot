@@ -1,17 +1,14 @@
-import { fallbackMessage } from '../../constants/commands';
+import { fallbackMessage } from '#constants/commands.ts';
+import { getMarket, PRIVATE_MARKET_TAG, postMarket, XMTP_MARKET_TAG } from '#helpers/onit.ts';
+import { checkAddressExists } from '#utils/check-address-exists.ts';
+import { generateInitialBet } from '#utils/dummy-bets.ts';
+import { predictMarketAddress } from '#utils/predict-market-address.ts';
+import { validateMarket } from '#utils/validate-market.ts';
+
 import { stripIndents } from 'common-tags';
-import { Client } from 'onit-markets';
-import type { Client as XmtpClient } from '@xmtp/node-sdk';
-import { getMarket, postMarket, PRIVATE_MARKET_TAG, XMTP_MARKET_TAG } from '#helpers/onit.ts';
+import SuperJSON from 'superjson';
 import { isAddress } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
-import { generateInitialBet } from '../../utils/dummy-bets';
-import { validateMarket } from '../../utils/validate-market';
-import { predictMarketAddress } from '../../utils/predict-market-address';
-import { checkAddressExists } from '../../utils/check-address-exists';
-import SuperJSON from 'superjson';
-
-type Conversation = NonNullable<Awaited<ReturnType<XmtpClient['conversations']['getConversationById']>>>;
 
 export async function handleCopyCommand(onit: Client, conversation: Conversation, marketNumber: string, initiator: string) {
     // Get the last message from the conversation
@@ -21,6 +18,8 @@ export async function handleCopyCommand(onit: Client, conversation: Conversation
     if (!lastMessage || typeof lastMessage.content !== 'string') {
         return await conversation.send(
             stripIndents`
+import type { Client as XmtpClient } from '@xmtp/node-sdk';
+import type { Client } from 'onit-markets';
             No previous message found. Please use /list first to see available markets.
 
             ${fallbackMessage}

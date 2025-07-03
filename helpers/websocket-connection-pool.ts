@@ -12,7 +12,9 @@ interface WSConnection {
 }
 
 interface PendingRequest {
+	// biome-ignore lint/suspicious/noExplicitAny: any as unknown doesn't cover the void | PromiseLike<void> case
 	resolve: (value: any) => void;
+	// biome-ignore lint/suspicious/noExplicitAny: any as unknown doesn't cover the void | PromiseLike<void> case
 	reject: (error: any) => void;
 	timeout: NodeJS.Timeout;
 	timestamp: number;
@@ -34,9 +36,9 @@ export class WebSocketConnectionPool {
 		}, 60000); // Cleanup every minute
 	}
 
-	private async createConnection(conversation: XmtpConversation): Promise<any> {
+	private async createConnection(conversation: XmtpConversation): Promise<WebSocket> {
 		const wsUrl = `ws://localhost:8787/bot/xmtp/${conversation.id}/message`;
-		console?.log(`Creating WebSocket connection for chat ${conversation.id}:`, wsUrl);
+		console.log(`Creating WebSocket connection for chat ${conversation.id}:`, wsUrl);
 
 		const ws = new WebSocket(wsUrl);
 		const connectionEntry: WSConnection = {
@@ -44,7 +46,7 @@ export class WebSocketConnectionPool {
 			conversation,
 			isConnecting: true,
 			lastUsed: Date.now(),
-			requestCount: 0
+			requestCount: 0,
 		};
 
 		this.connections.set(conversation.id, connectionEntry);
@@ -56,19 +58,21 @@ export class WebSocketConnectionPool {
 			}, this.connectionTimeout);
 
 			ws.onopen = () => {
+				console.log('WebSocket connection opened for chat', conversation.id);
 				clearTimeout(timeout);
-				console?.log(`WebSocket connected for chat ${conversation.id}`);
 				connectionEntry.isConnecting = false;
 				resolve(ws);
 			};
 
-			ws.onmessage = (event: any) => {
+			ws.onmessage = (event: MessageEvent) => {
+				console.log('WebSocket message received for chat', conversation.id);
 				this.handleMessage(event, conversation);
 			};
 
-			ws.onerror = (error: any) => {
+			ws.onerror = (error: Event) => {
+				console.log('WebSocket error for chat', conversation.id);
 				clearTimeout(timeout);
-				console?.error(`WebSocket error for chat ${conversation.id}:`, error);
+				console.error(`WebSocket error for chat ${conversation.id}:`, error);
 				this.connections.delete(conversation.id);
 				if (connectionEntry.isConnecting) {
 					reject(error);
@@ -76,27 +80,35 @@ export class WebSocketConnectionPool {
 			};
 
 			ws.onclose = () => {
-				console?.log(`WebSocket connection closed for chat ${conversation.id}`);
+				console.log('WebSocket connection closed for chat', conversation.id);
 				this.connections.delete(conversation.id);
 				this.rejectPendingRequests(conversation.id);
 			};
 		});
 	}
 
-	private handleMessage(event: any, conversation: XmtpConversation) {
+	private handleMessage(event: MessageEvent, conversation: XmtpConversation) {
 		try {
-			const response = z.object({
-				success: z.boolean(),
-				data: z.object({
-					requestId: z.string(),
-					chatId: z.string(),
-					message: z.string()
+			const response = z
+				.object({
+					success: z.boolean(),
+					data: z.object({
+						requestId: z.string(),
+						chatId: z.string(),
+						message: z.string(),
+					}),
 				})
-			}).parse(JSON.parse(event.data));
-			console?.log(`[WebSocketConnectionPool handleMessage] WebSocket response received for chat ${conversation.id}:`, response);
+				.parse(JSON.parse(event.data));
+			console.log(
+				`[WebSocketConnectionPool handleMessage] WebSocket response received for chat ${conversation.id}:`,
+				response,
+			);
 
 			if (!response.success) {
-				console?.error(`[WebSocketConnectionPool handleMessage] WebSocket response received for chat ${conversation.id}:`, response);
+				console.error(
+					`[WebSocketConnectionPool handleMessage] WebSocket response received for chat ${conversation.id}:`,
+					response,
+				);
 				return;
 			}
 
@@ -108,9 +120,8 @@ export class WebSocketConnectionPool {
 			}
 
 			// conversation.send(response.data.message);
-
 		} catch (error) {
-			console?.error(`Error parsing WebSocket message for chat ${conversation.id}:`, error);
+			console.error(`Error parsing WebSocket message for chat ${conversation.id}:`, error);
 		}
 	}
 
@@ -130,14 +141,13 @@ export class WebSocketConnectionPool {
 		const toRemove: string[] = [];
 
 		for (const [chatId, connection] of this.connections) {
-			if (now - connection.lastUsed > this.idleTimeout ||
-				connection.requestCount > this.maxRequestsPerConnection) {
+			if (now - connection.lastUsed > this.idleTimeout || connection.requestCount > this.maxRequestsPerConnection) {
 				toRemove.push(chatId);
 			}
 		}
 
 		for (const chatId of toRemove) {
-			console?.log(`Cleaning up idle connection for chat ${chatId}`);
+			console.log(`Cleaning up idle connection for chat ${chatId}`);
 			const connection = this.connections.get(chatId);
 			if (connection?.ws) {
 				connection.ws.close();
@@ -147,19 +157,18 @@ export class WebSocketConnectionPool {
 
 		// If we have too many connections, remove the oldest ones
 		if (this.connections.size > this.maxConnections) {
-			const sorted = Array.from(this.connections.entries())
-				.sort((a, b) => a[1].lastUsed - b[1].lastUsed);
+			const sorted = Array.from(this.connections.entries()).sort((a, b) => a[1].lastUsed - b[1].lastUsed);
 
 			const excess = sorted.slice(0, this.connections.size - this.maxConnections);
 			for (const [chatId, connection] of excess) {
-				console?.log(`Removing excess connection for chat ${chatId}`);
+				console.log(`Removing excess connection for chat ${chatId}`);
 				connection.ws.close();
 				this.connections.delete(chatId);
 			}
 		}
 	}
 
-	private async getConnection(conversation: XmtpConversation): Promise<any> {
+	private async getConnection(conversation: XmtpConversation): Promise<WebSocket> {
 		const existing = this.connections.get(conversation.id);
 
 		// Return existing healthy connection
@@ -190,7 +199,7 @@ export class WebSocketConnectionPool {
 		return this.createConnection(conversation);
 	}
 
-	async sendRequest(message: string, conversation: XmtpConversation): Promise<any> {
+	async sendRequest(message: string, conversation: XmtpConversation): Promise<void> {
 		try {
 			const ws = await this.getConnection(conversation);
 			const connection = this.connections.get(conversation.id);
@@ -207,15 +216,15 @@ export class WebSocketConnectionPool {
 			const request = {
 				requestId,
 				chatId: conversation.id,
-				prompt: message
+				prompt: message,
 			};
 
 			// Send the request
 			ws.send(JSON.stringify(request));
-			console?.log(`WebSocket request sent for chat ${conversation.id}:`, request);
+			console.log(`WebSocket request sent for chat ${conversation.id}:`, request);
 
 			// Wait for response with timeout
-			return new Promise<any>((resolve, reject) => {
+			return new Promise<void>((resolve, reject) => {
 				const timeout = setTimeout(() => {
 					this.pendingRequests.delete(requestId);
 					reject(new Error('WebSocket request timeout'));
@@ -225,11 +234,11 @@ export class WebSocketConnectionPool {
 					resolve,
 					reject,
 					timeout,
-					timestamp: Date.now()
+					timestamp: Date.now(),
 				});
 			});
 		} catch (error) {
-			console?.error(`Error sending WebSocket request for chat ${conversation.id}:`, error);
+			console.error(`Error sending WebSocket request for chat ${conversation.id}:`, error);
 			throw error;
 		}
 	}
@@ -243,8 +252,8 @@ export class WebSocketConnectionPool {
 				isConnecting: conn.isConnecting,
 				lastUsed: new Date(conn.lastUsed).toISOString(),
 				requestCount: conn.requestCount,
-				readyState: conn.ws.readyState
-			}))
+				readyState: conn.ws.readyState,
+			})),
 		};
 	}
 
