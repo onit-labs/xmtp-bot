@@ -11,7 +11,5 @@ if (!API_URL) {
 
 // Initialize the client with your API endpoint
 export const onitClient = getClient(API_URL, {
-    headers: {
-        Authorization: `Bearer ${ONIT_API_KEY}`,
-    },
+    headers: { Authorization: `Bearer ${ONIT_API_KEY}` },
 });

@@ -9,8 +9,8 @@ import { handleCopyCommand } from './commands/copy';
 import { handleListCommand } from './commands/list';
 
 import type { Client as XmtpClient } from '@xmtp/node-sdk';
+import type { XmtpConversation } from '#types.ts';
 
-type XmtpConversation = NonNullable<Awaited<ReturnType<XmtpClient['conversations']['getConversationById']>>>;
 
 /**
  * Handle incoming XMTP messages.
@@ -87,7 +87,7 @@ async function processMessage(message: string, conversation: XmtpConversation, c
 	// If no command found and a trigger is found, call the bot
 	if (!checkForCommand(message) && checkForTrigger(message)) {
 		console.log('calling bot', message, conversation.id);
-		const botResponse = await callBot(message.replace('@onit ', ''), conversation.id);
+		const botResponse = await callBot(message.replace('@onit ', ''), conversation);
 
 		console.log('botResponse', botResponse);
 
@@ -149,7 +149,7 @@ async function processMessage(message: string, conversation: XmtpConversation, c
 			}
 			default: {
 				// If command not recognized, try the bot
-				const botResponse = await callBot(message, conversation.id);
+				const botResponse = await callBot(message, conversation);
 				if (!botResponse.success) return fallbackMessage;
 				return botResponse.data.message;
 			}
@@ -171,30 +171,14 @@ async function processMessage(message: string, conversation: XmtpConversation, c
 async function shouldRespondToMessage(message: DecodedMessage, agentInboxId: string, client: Client): Promise<boolean> {
 	const messageContent = extractMessageContent(message);
 
-	console.log('[shouldRespondToMessage] messageContent', messageContent);
-
 	// Safety check for empty content
 	if (!messageContent || messageContent.trim() === '') return false;
 
 	const lowerMessage = messageContent.toLowerCase().trim();
 
-	// If this is a reply to the agent, always process it
-	if (await isReplyToAgent(message, agentInboxId, client)) {
-		console.log('[shouldRespondToMessage] is reply to agent');
-		return true;
-	}
-
-	// Check if message contains any trigger words/phrases
-	if (checkForTrigger(lowerMessage)) {
-		console.log('[shouldRespondToMessage] has trigger', lowerMessage);
-		return true;
-	}
-
-	// Check if message contains any command
-	if (checkForCommand(lowerMessage)) {
-		console.log('[shouldRespondToMessage] has command', lowerMessage);
-		return true;
-	}
+	if (await isReplyToAgent(message, agentInboxId, client)) return true;
+	if (checkForTrigger(lowerMessage)) return true;
+	if (checkForCommand(lowerMessage)) return true;
 
 	return false;
 }

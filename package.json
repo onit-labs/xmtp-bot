@@ -7,6 +7,7 @@
     "#helpers/*": "./helpers/*",
     "#handlers/*": "./handlers/*",
     "#constants.ts": "./constants.ts",
+    "#types.ts": "./types.ts",
     "#validators/*": "./validators/*"
   },
   "scripts": {

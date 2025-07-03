@@ -1,10 +1,27 @@
-import wretch from 'wretch';
-import { PROXY_URL } from '../constants/index.ts';
+import { WebSocketConnectionPool } from './websocket-connection-pool.ts';
 
 import type { Client } from 'onit-markets';
 import type { Address } from 'viem';
+import type { XmtpConversation } from '#types.ts';
+
 export const PRIVATE_MARKET_TAG = '__PRIVATE';
 export const XMTP_MARKET_TAG = '__XMTP';
+
+// Global connection pool instance
+const wsPool = new WebSocketConnectionPool();
+
+// Graceful shutdown handling
+if (typeof process !== 'undefined') {
+	process.on('SIGINT', () => {
+		console?.log('Shutting down WebSocket connection pool...');
+		wsPool.destroy();
+	});
+
+	process.on('SIGTERM', () => {
+		console?.log('Shutting down WebSocket connection pool...');
+		wsPool.destroy();
+	});
+}
 
 export async function getMarkets(
 	onit: Client,
@@ -66,7 +83,7 @@ export const getMarket = async (onit: Client, marketAddress: Address) => {
 }
 
 export const getBets = async (onit: Client, userAddress: Address) => {
-	// TODO update client for correct type - users is fine here
+	// @ts-expect-error: TODO update client for correct type - users is fine here
 	const betsResponse = await onit.api.users[":address"].predictions.$get({
 		param: {
 			address: userAddress,
@@ -101,23 +118,11 @@ export const postMarket = async (onit: Client, market: any) => {
 	};
 };
 
-export const callBot = async (message: string, chatId: string) => {
-	const response = await wretch(`${PROXY_URL}/bot/xmtp/${chatId}/message`)
-		.post({ prompt: message })
-		.json<
-			| {
-					success: false;
-					error: string;
-			  }
-			| {
-					success: true;
-					data: { message: string };
-			  }
-		>()
-		.catch((error) => {
-			console.error('Error calling bot:', error);
-			throw error;
-		});
+export const callBot = async (message: string, conversation: XmtpConversation) => {
+	return wsPool.sendRequest(message, conversation);
+};
 
-	return response;
+// Export stats function for monitoring
+export const getWebSocketStats = () => {
+	return wsPool.getStats();
 };
