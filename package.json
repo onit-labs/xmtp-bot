@@ -14,10 +14,10 @@
     "#validators/*": "./helpers/validators/*"
   },
   "scripts": {
-    "start": "bun run index.ts",
-    "generate-keys": "bun run scripts/generate-keys.ts",
-    "dev": "bun --watch index.ts",
-    "build": "bun build index.ts --outdir ./dist"
+    "start": "pnpm run index.ts",
+    "generate-keys": "pnpm run scripts/generate-keys.ts",
+    "dev": "node index.ts",
+    "build": "pnpm build index.ts --outdir ./dist"
   },
   "devDependencies": {
     "@types/bun": "latest",
@@ -30,12 +30,13 @@
   "dependencies": {
     "@xmtp/node-sdk": "^2.1.0",
     "common-tags": "^1.8.2",
+    "dotenv": "^17.0.1",
     "onit-markets": "^0.1.5",
     "superjson": "^2.2.2",
     "wretch": "^2.11.0",
     "zod": "^3.25.55"
   },
   "engines": {
-    "bun": ">=1.0.0"
+    "node": "^23"
   }
 }
