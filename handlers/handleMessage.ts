@@ -108,7 +108,7 @@ async function processMessage(
 
     // If no command found and a trigger is found, call the bot
     if (!checkForCommand(message) && checkForTrigger(message)) {
-        const botResponse = await callBot(message);
+        const botResponse = await callBot(message, conversation.id);
         if (!botResponse.success) {
             return "Sorry, I encountered an error while processing your request. Please try again later.";
         }
@@ -168,7 +168,8 @@ async function processMessage(
             }
             default: {
                 // If command not recognized, try the bot
-                const botResponse = await callBot(message);
+                const botResponse = await callBot(message, conversation.id);
+                console.log('botResponse', botResponse);
                 if (!botResponse.success) {
                     return fallbackMessage;
                 }

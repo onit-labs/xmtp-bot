@@ -65,7 +65,7 @@ export const getMarket = async (onit: Client, marketAddress: Address) => {
 }
 
 export const getBets = async (onit: Client, userAddress: Address) => {
-	// TODO update client for correct type - users is fine here
+	// @ts-ignore update client for correct type - users is fine here
 	const betsResponse = await onit.api.users[":address"].predictions.$get({
 		param: {
 			address: userAddress,
@@ -100,8 +100,13 @@ export const postMarket = async (onit: Client, market: any) => {
 	};
 };
 
-export const callBot = async (message: string) => {
-	const response = await fetch(`${API_URL}/bot/test12355/message`, {
+export const callBot = async (message: string, conversationId: string) => {
+	console.log({
+		conversationId,
+		message,
+		API_URL,
+	});
+	const response = await fetch(`${API_URL}/bot/xmtp/${conversationId}/message`, {
 		method: 'POST',
 		headers: {
 			'Content-Type': 'application/json',
@@ -110,6 +115,7 @@ export const callBot = async (message: string) => {
 			prompt: message,
 		}),
 	});
+	console.log('response', response);
 	return (await response.json()) as unknown as {
 		success: false;
 		error: string;
