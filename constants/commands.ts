@@ -25,9 +25,10 @@ export const commands = {
 } as const;
 
 export const fallbackMessage =
-	"Available commands:\n\n" +
+	"You can chat with the Onit agent by starting your message with @onit\n\n" +
+	"Or use a command directly:\n\n" +
 	Object.values(commands)
-		.map((c) => `${c.command}: ${c.description} \neg. ${c.example}`)
+		.map((c) => `*${c.command}*: ${c.description} \neg. ${c.example}`)
 		.join("\n\n") +
 	"\n\n" +
 	"You can find all markets at https://onit.fun/";

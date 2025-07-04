@@ -162,7 +162,7 @@ async function processMessage(message: string, conversation: XmtpConversation, c
 }
 
 /**
- * Check if a message should trigger the Squabble agent
+ * Check if a message should trigger the agent
  * @param message - The decoded XMTP message
  * @param agentInboxId - The agent's inbox ID
  * @param client - The XMTP client instance
@@ -315,7 +315,8 @@ const checkForCommand = (message: string) => {
 	const lowerMessage = message.toLowerCase().trim();
 	return Object.values(commands).some((cmd) => {
 		const cmdStr = cmd.command.toLowerCase();
-		return lowerMessage.startsWith(`/${cmdStr}`) || lowerMessage === `@onit ${cmdStr}`;
+		// If the message starts with the command, or is matches the pattern of @onit [cmd] [item]
+		return lowerMessage.startsWith(`/${cmdStr}`) || lowerMessage === `@onit ${cmdStr}` || lowerMessage.match(new RegExp(`^@onit ${cmdStr}\\s+\\S+[\\s.]*$`));
 	});
 };
 
