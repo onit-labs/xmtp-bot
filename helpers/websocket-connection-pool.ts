@@ -20,6 +20,48 @@ interface PendingRequest {
 	timestamp: number;
 }
 
+const acknowledgementSchema = z.object({
+	type: z.literal('cf_agent_mcp_servers'),
+	mcp: z.object({
+		servers: z.record(
+			z.string(),
+			z.object({
+				auth_url: z.string().nullable(),
+				capabilities: z.object({
+					tools: z.record(z.string(), z.any()),
+				}),
+				instructions: z.string().nullable(),
+				name: z.string(),
+				server_url: z.string(),
+				state: z.enum(['ready', 'error', 'loading']),
+			}),
+		),
+		tools: z.array(
+			z.object({
+				name: z.string(),
+				description: z.string(),
+				inputSchema: z.object({
+					type: z.string(),
+					properties: z.record(z.string(), z.any()).optional(),
+					required: z.array(z.string()).optional(),
+					additionalProperties: z.boolean().optional(),
+					$schema: z.string(),
+				}),
+				serverId: z.string(),
+			}),
+		),
+	}),
+});
+
+const responseSchema = z.object({
+	success: z.boolean(),
+	data: z.object({
+		requestId: z.string(),
+		chatId: z.string(),
+		message: z.string(),
+	}),
+});
+
 export class WebSocketConnectionPool {
 	private connections = new Map<string, WSConnection>();
 	private pendingRequests = new Map<string, PendingRequest>();
@@ -65,8 +107,14 @@ export class WebSocketConnectionPool {
 			};
 
 			ws.onmessage = (event: MessageEvent) => {
-				console.log('WebSocket message received for chat', conversation.id);
-				this.handleMessage(event, conversation);
+				const acknowledgement = acknowledgementSchema.safeParse(JSON.parse(event.data));
+
+				// the first message is a connection acknowledgement & contains the information of the bots available functions
+				if (acknowledgement.success && acknowledgement.data.type === 'cf_agent_mcp_servers') {
+					console.log('WebSocket acknowledgement message received for chat', conversation.id, acknowledgement.data);
+				} else {
+					this.handleMessage(event, conversation);
+				}
 			};
 
 			ws.onerror = (error: Event) => {
@@ -89,16 +137,7 @@ export class WebSocketConnectionPool {
 
 	private handleMessage(event: MessageEvent, conversation: XmtpConversation) {
 		try {
-			const response = z
-				.object({
-					success: z.boolean(),
-					data: z.object({
-						requestId: z.string(),
-						chatId: z.string(),
-						message: z.string(),
-					}),
-				})
-				.parse(JSON.parse(event.data));
+			const response = responseSchema.parse(JSON.parse(event.data));
 			console.log(
 				`[WebSocketConnectionPool handleMessage] WebSocket response received for chat ${conversation.id}:`,
 				response,
