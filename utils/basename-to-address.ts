@@ -1,4 +1,4 @@
-import { createPublicClient, http, namehash, type Address } from 'viem';
+import { type Address, createPublicClient, http, namehash } from 'viem';
 import { base } from 'viem/chains';
 
 const BASENAME_L2_RESOLVER_ADDRESS = '0xC6d566A56A1aFf6508b41f6c90ff131615583BCD' as const;

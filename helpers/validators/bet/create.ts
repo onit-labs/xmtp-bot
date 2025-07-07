@@ -1,9 +1,9 @@
-import { z } from "zod";
-import { createDaysUntilBetSchema } from "./days-until";
-import { createDiscreteBetSchema } from "./discrete";
-import { createNormalBetSchema } from "./normal";
-import { createPercentageBetSchema } from "./percentage";
-import { createScoreBetSchema } from "./score";
+import { z } from 'zod';
+import { createDaysUntilBetSchema } from './days-until.ts';
+import { createDiscreteBetSchema } from './discrete.ts';
+import { createNormalBetSchema } from './normal.ts';
+import { createPercentageBetSchema } from './percentage.ts';
+import { createScoreBetSchema } from './score.ts';
 
 export const betSchema = z.preprocess(
   // TODO: extract this to a utility function that is used with all query params in our hono server validators

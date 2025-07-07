@@ -1,10 +1,10 @@
-import { fallbackMessage } from '#constants.ts';
+import { fallbackMessage } from '#constants/commands.ts';
 import { getMarkets, XMTP_MARKET_TAG } from '#helpers/onit.ts';
 
 import { stripIndents } from 'common-tags';
-import { Client } from 'onit-markets';
 
 import type { Client as XmtpClient } from '@xmtp/node-sdk';
+import type { Client } from 'onit-markets';
 
 type Conversation = NonNullable<Awaited<ReturnType<XmtpClient['conversations']['getConversationById']>>>;
 

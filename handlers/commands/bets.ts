@@ -1,12 +1,12 @@
-import { fallbackMessage } from '#constants.ts';
+import { fallbackMessage } from '#constants/commands.ts';
 import { getBets } from '#helpers/onit.ts';
-import { basenameToAddress } from '../../utils/basename-to-address';
+import { basenameToAddress } from '#utils/basename-to-address.ts';
 
 import { stripIndents } from 'common-tags';
-import { Client } from 'onit-markets';
+import { isAddress } from 'viem';
 
 import type { Client as XmtpClient } from '@xmtp/node-sdk';
-import { isAddress } from 'viem';
+import type { Client } from 'onit-markets';
 
 type ConversationType = NonNullable<Awaited<ReturnType<XmtpClient['conversations']['getConversationById']>>>;
 

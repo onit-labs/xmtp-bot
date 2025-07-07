@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { baseBetSchema } from "./base";
+import { z } from 'zod';
+import { baseBetSchema } from './base.ts';
 
 export const discreteBetSchema = z.object({
   options: z.string().array(),

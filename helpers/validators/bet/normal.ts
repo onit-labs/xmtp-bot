@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { baseBetSchema } from "./base";
+import { z } from 'zod';
+import { baseBetSchema } from './base.ts';
 
 export const normalBetSchema = z.object({
   mean: z.coerce.number().describe("The mean of the normal distribution"),
