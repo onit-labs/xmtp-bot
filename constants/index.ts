@@ -21,7 +21,7 @@ try {
 }
 
 /* Derived constants */
-export const API_URL = process.env.NODE_ENV === 'production' ? ENV.ONIT_API_URL : 'http://localhost:8787';
+export const API_URL = process.env.NODE_ENV === 'production' || process.env.NODE_ENV === 'preview' ? ENV.ONIT_API_URL : 'http://localhost:8787';
 export const PROXY_URL = 'http://localhost:3000/proxy';
 
 /* XMTP specific constants */
