@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@xmtp/node-sdk':
-        specifier: ^2.1.0
-        version: 2.2.1
+        specifier: ^3.1.0
+        version: 3.1.0
       common-tags:
         specifier: ^1.8.2
         version: 1.8.2
@@ -126,12 +126,12 @@ packages:
   '@xmtp/content-type-text@2.0.2':
     resolution: {integrity: sha512-nlRufOYPrG5sNbruNPCsb6Qk9/jmJ5lMooPsZEo4Dbwda/2S4bSvrrIncT6if7M2SCha3hxtlgJlFGeTtHy4gQ==}
 
-  '@xmtp/node-bindings@1.2.2':
-    resolution: {integrity: sha512-9FTcUhhLiR7zmRX3SjK7KC5c0DQkaoy9rYM9Jk73dgPFwLmDx5MOnEVziOYeYuw8xULlIGYu9kZ9QbRFJtByfQ==}
+  '@xmtp/node-bindings@1.2.6':
+    resolution: {integrity: sha512-/AXIyuXnZOw+XtzqNqNLBAHbN+XtXCq20PHNK1FGQzGvIqxt85QCKfGNlu3926mWwLFWHTd/8mJVmOOEqLVZRA==}
     engines: {node: '>=18'}
 
-  '@xmtp/node-sdk@2.2.1':
-    resolution: {integrity: sha512-4vpEcpY/xk+O0AZqva6gWv3DdWpyuforjcajwMc6UXaMahSBHBqFRGXNmTpkFejZrBBfreIYvnOM6tY++fr4bw==}
+  '@xmtp/node-sdk@3.1.0':
+    resolution: {integrity: sha512-EzCmHXtMlDAju3/bL71P6Bh0qoXZxOOdlK5NRhkpUnoUQA93Hqkr5CC6Mxa8oinOHebXZx7B+q0FxnPa5dHWAA==}
     engines: {node: '>=20'}
 
   '@xmtp/proto@3.83.0':
@@ -320,14 +320,14 @@ snapshots:
     dependencies:
       '@xmtp/content-type-primitives': 2.0.2
 
-  '@xmtp/node-bindings@1.2.2': {}
+  '@xmtp/node-bindings@1.2.6': {}
 
-  '@xmtp/node-sdk@2.2.1':
+  '@xmtp/node-sdk@3.1.0':
     dependencies:
       '@xmtp/content-type-group-updated': 2.0.2
       '@xmtp/content-type-primitives': 2.0.2
       '@xmtp/content-type-text': 2.0.2
-      '@xmtp/node-bindings': 1.2.2
+      '@xmtp/node-bindings': 1.2.6
 
   '@xmtp/proto@3.83.0':
     dependencies:
