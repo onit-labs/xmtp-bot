@@ -1,6 +1,7 @@
 import z from 'zod';
 
 import type { XmtpConversation } from '#types.ts';
+import { API_URL } from '#constants.ts';
 
 // WebSocket connection pool and request management
 interface WSConnection {
@@ -79,7 +80,13 @@ export class WebSocketConnectionPool {
 	}
 
 	private async createConnection(conversation: XmtpConversation): Promise<WebSocket> {
-		const wsUrl = `ws://localhost:8787/bot/xmtp/${conversation.id}/message`;
+		// Convert HTTP URL to WebSocket URL with fallback
+		const baseUrl = API_URL || 'http://localhost:8787';
+		const wsUrl = baseUrl.replace('http://', 'ws://').replace('https://', 'wss://') + `/bot/xmtp/${conversation.id}/message`;
+
+		console.log(`[WebSocketConnectionPool] Environment: ${process.env.NODE_ENV}`);
+		console.log(`[WebSocketConnectionPool] API_URL: ${API_URL}`);
+		console.log(`[WebSocketConnectionPool] Base URL: ${baseUrl}`);
 		console.log(`Creating WebSocket connection for chat ${conversation.id}:`, wsUrl);
 
 		const ws = new WebSocket(wsUrl);
