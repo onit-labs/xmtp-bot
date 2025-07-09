@@ -14,7 +14,7 @@
     "#validators/*": "./helpers/validators/*"
   },
   "scripts": {
-    "start": "pnpm run index.ts",
+    "start": "node --experimental-strip-types index.ts",
     "generate-keys": "pnpm run scripts/generate-keys.ts",
     "dev": "node index.ts",
     "build": "pnpm build index.ts --outdir ./dist"
