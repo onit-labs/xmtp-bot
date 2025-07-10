@@ -23,10 +23,10 @@ export async function handleMessage(message: XmtpMessage, client: XmtpClient) {
 	let conversation: XmtpConversation | null = null;
 	try {
 		const senderInboxId = message.senderInboxId;
-		const botAddress = client.inboxId.toLowerCase();
+		const botInboxId = client.inboxId.toLowerCase();
 
 		// Ignore messages from the bot itself
-		if (senderInboxId.toLowerCase() === botAddress) return;
+		if (senderInboxId.toLowerCase() === botInboxId) return;
 
 		// Extract the message content from the message & store it in the message object
 		message.formattedContent = extractMessageContent(message);
@@ -43,8 +43,11 @@ export async function handleMessage(message: XmtpMessage, client: XmtpClient) {
 			throw new Error(`Could not find conversation for ID: ${message.conversationId}`);
 		}
 
+		const shouldRespond = await shouldRespondToMessage(message, botInboxId, client);
+		console.log('[handleMessage] shouldRespond', shouldRespond);
+
 		// Check if message should trigger the Onit agent
-		if (!(await shouldRespondToMessage(message, client.inboxId, client))) {
+		if (!shouldRespond) {
 			// Check if they mentioned the bot but didn't use proper triggers
 			if (shouldSendHelpHint(message.formattedContent)) {
 				const helpMessage =
@@ -62,6 +65,8 @@ export async function handleMessage(message: XmtpMessage, client: XmtpClient) {
 		if (!senderWalletAddress) throw new Error(`Unable to find sender wallet address, skipping`);
 
 		const response = await processMessage(message, conversation, client);
+
+		console.log('[processMessage] response', response);
 
 		// Don't send "TOOL_HANDLED" responses - these indicate tools have already sent direct messages
 		if (response.trim() === 'TOOL_HANDLED') return;
@@ -96,7 +101,10 @@ async function processMessage(
 	const [firstWord, ...rest] = words;
 
 	// If no command found and a trigger is found, call the bot
-	if (!checkForCommand(message.formattedContent) && checkForTrigger(message.formattedContent)) {
+	if (
+		(!checkForCommand(message.formattedContent) && checkForTrigger(message.formattedContent)) ||
+		(await isDirectMessage(message, client))
+	) {
 		console.log('calling bot', message.id, conversation.id);
 		const response = await callBot(message, conversation, client);
 		return response.data.message;
@@ -182,11 +190,19 @@ async function shouldRespondToMessage(
 
 	const lowerMessage = message.formattedContent.toLowerCase().trim();
 
+	if (await isDirectMessage(message, client)) return true;
 	if (await isReplyToAgent(message, agentInboxId, client)) return true;
 	if (checkForTrigger(lowerMessage)) return true;
 	if (checkForCommand(lowerMessage)) return true;
 
 	return false;
+}
+
+async function isDirectMessage(message: XmtpMessage<true>, client: XmtpClient): Promise<boolean> {
+	const conversation = await client.conversations.getConversationById(message.conversationId);
+	if (!conversation) return false;
+	const metadata = await conversation.metadata();
+	return metadata?.conversationType === 'dm';
 }
 
 /**
