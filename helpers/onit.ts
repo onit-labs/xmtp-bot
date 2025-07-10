@@ -125,7 +125,7 @@ export const postMarket = async (onit: Client, market: unknown) => {
 };
 
 export const callBot = async (message: XmtpMessage<true>, conversation: XmtpConversation, client: XmtpClient) => {
-	return wsPool.sendRequest(message, conversation, client);
+	return await wsPool.sendRequest(message, conversation, client);
 };
 
 // Export stats function for monitoring

@@ -98,8 +98,8 @@ async function processMessage(
 	// If no command found and a trigger is found, call the bot
 	if (!checkForCommand(message.formattedContent) && checkForTrigger(message.formattedContent)) {
 		console.log('calling bot', message.id, conversation.id);
-		await callBot(message, conversation, client);
-		return 'TOOL_HANDLED';
+		const response = await callBot(message, conversation, client);
+		return response.data.message;
 	}
 
 	let command: string | null = null;

@@ -130,7 +130,6 @@ export class WebSocketConnectionPool {
 			};
 
 			ws.onmessage = (event: MessageEvent) => {
-				console.log('[WebSocketConnectionPool] event.data', event.data);
 				const acknowledgement = acknowledgementSchema.safeParse(JSON.parse(event.data));
 
 				// the first message is a connection acknowledgement & contains the information of the bots available functions
@@ -184,8 +183,6 @@ export class WebSocketConnectionPool {
 				console.log('[WebSocketConnectionPool handleMessage] request.resolve', response.data.message);
 				request.resolve(response);
 			}
-
-			// conversation.send(response.data.message);
 		} catch (error) {
 			console.error(`Error parsing WebSocket message for chat ${conversation.id}:`, error);
 		}
@@ -271,7 +268,6 @@ export class WebSocketConnectionPool {
 		client: XmtpClient,
 	): Promise<BotResponse> {
 		try {
-			console.log('sendRequest', this, message, conversation, client);
 			const ws = await this.getConnection(conversation);
 			const connection = this.connections.get(conversation.id);
 
