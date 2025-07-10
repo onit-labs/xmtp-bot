@@ -1,7 +1,8 @@
+import { API_URL } from '#constants.ts';
+
 import z from 'zod';
 
 import type { XmtpConversation } from '#types.ts';
-import { API_URL } from '#constants.ts';
 
 // Response structure returned by the Cloudflare worker.
 // Example: { success: true, data: { requestId: "<id>", chatId: "<chatId>", message: "<bot-response>" } }
@@ -39,13 +40,15 @@ const acknowledgementSchema = z.object({
 			z.string(),
 			z.object({
 				auth_url: z.string().nullable(),
-				capabilities: z.object({
-					tools: z.record(z.string(), z.any()),
-				}),
+				capabilities: z
+					.object({
+						tools: z.record(z.string(), z.any()),
+					})
+					.nullable(),
 				instructions: z.string().nullable(),
 				name: z.string(),
 				server_url: z.string(),
-				state: z.enum(['ready', 'error', 'loading']),
+				state: z.enum(['authenticating', 'connecting', 'ready', 'discovering', 'failed']),
 			}),
 		),
 		tools: z.array(
@@ -93,7 +96,8 @@ export class WebSocketConnectionPool {
 	private async createConnection(conversation: XmtpConversation): Promise<WebSocket> {
 		// Convert HTTP URL to WebSocket URL with fallback
 		const baseUrl = API_URL || 'http://localhost:8787';
-		const wsUrl = baseUrl.replace('http://', 'ws://').replace('https://', 'wss://') + `/bot/xmtp/${conversation.id}/message`;
+		const wsUrl =
+			baseUrl.replace('http://', 'ws://').replace('https://', 'wss://') + `/bot/xmtp/${conversation.id}/message`;
 
 		console.log(`[WebSocketConnectionPool] Environment: ${process.env.NODE_ENV}`);
 		console.log(`[WebSocketConnectionPool] API_URL: ${API_URL}`);
