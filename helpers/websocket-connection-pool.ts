@@ -125,6 +125,7 @@ export class WebSocketConnectionPool {
 			};
 
 			ws.onmessage = (event: MessageEvent) => {
+				console.log('[WebSocketConnectionPool] event.data', event.data);
 				const acknowledgement = acknowledgementSchema.safeParse(JSON.parse(event.data));
 
 				// the first message is a connection acknowledgement & contains the information of the bots available functions
