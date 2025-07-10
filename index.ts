@@ -1,15 +1,16 @@
-import { createSigner, logAgentDetails } from '#clients/xmtp.ts';
+import { createSigner, logAgentDetails, type XmtpClient } from '#clients/xmtp.ts';
 import { ENCRYPTION_KEY, WALLET_KEY, XMTP_ENV } from '#constants.ts';
 import { handleMessage } from '#handlers/handleMessage.ts';
 
+import { ReactionCodec } from '@xmtp/content-type-reaction';
 import { Client, type XmtpEnv } from '@xmtp/node-sdk';
 import { toBytes } from 'viem/utils';
 
 /**
-* Initialize the XMTP client.
-*
-* @returns An initialized XMTP Client instance
-*/
+ * Initialize the XMTP client.
+ *
+ * @returns An initialized XMTP Client instance
+ */
 async function initializeXmtpClient() {
 	/* Create the signer using viem and parse the encryption key for the local db */
 	const signer = createSigner(WALLET_KEY);
@@ -19,7 +20,7 @@ async function initializeXmtpClient() {
 	const client = await Client.create(signer, {
 		dbEncryptionKey,
 		env: XMTP_ENV as XmtpEnv,
-		// codecs: [],
+		codecs: [new ReactionCodec()],
 	});
 
 	const identifier = await signer.getIdentifier();
@@ -27,7 +28,7 @@ async function initializeXmtpClient() {
 	void logAgentDetails(client as Client);
 
 	/* Sync the conversations from the network to update the local db */
-	console.log("✓ Syncing conversations...");
+	console.log('✓ Syncing conversations...');
 	console.log(`📝 Agent Inbox ID:`, client.inboxId);
 
 	await client.conversations.sync();
@@ -40,7 +41,7 @@ async function initializeXmtpClient() {
  *
  * @param client - The XMTP client instance
  */
-async function startMessageListener(client: Client) {
+async function startMessageListener(client: XmtpClient) {
 	const messageStream = await client.conversations.streamAllMessages();
 
 	for await (const message of messageStream) {

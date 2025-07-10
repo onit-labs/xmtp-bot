@@ -1,8 +1,9 @@
 import { API_URL } from '#constants.ts';
 
+import { ContentTypeReaction } from '@xmtp/content-type-reaction';
 import z from 'zod';
 
-import type { XmtpConversation } from '#types.ts';
+import type { XmtpClient, XmtpConversation, XmtpMessage } from '#clients/xmtp.ts';
 
 // Response structure returned by the Cloudflare worker.
 // Example: { success: true, data: { requestId: "<id>", chatId: "<chatId>", message: "<bot-response>" } }
@@ -129,7 +130,6 @@ export class WebSocketConnectionPool {
 			};
 
 			ws.onmessage = (event: MessageEvent) => {
-				console.log('[WebSocketConnectionPool] event.data', event.data);
 				const acknowledgement = acknowledgementSchema.safeParse(JSON.parse(event.data));
 
 				// the first message is a connection acknowledgement & contains the information of the bots available functions
@@ -174,14 +174,15 @@ export class WebSocketConnectionPool {
 				return;
 			}
 
+			console.log('[WebSocketConnectionPool handleMessage] response.data', response.data);
+
 			if (response.data.requestId && this.pendingRequests.has(response.data.requestId)) {
 				const request = this.pendingRequests.get(response.data.requestId)!;
 				clearTimeout(request.timeout);
 				this.pendingRequests.delete(response.data.requestId);
+				console.log('[WebSocketConnectionPool handleMessage] request.resolve', response.data.message);
 				request.resolve(response);
 			}
-
-			// conversation.send(response.data.message);
 		} catch (error) {
 			console.error(`Error parsing WebSocket message for chat ${conversation.id}:`, error);
 		}
@@ -261,7 +262,11 @@ export class WebSocketConnectionPool {
 		return this.createConnection(conversation);
 	}
 
-	async sendRequest(message: string, conversation: XmtpConversation): Promise<BotResponse> {
+	async sendRequest(
+		message: XmtpMessage<true>,
+		conversation: XmtpConversation,
+		client: XmtpClient,
+	): Promise<BotResponse> {
 		try {
 			const ws = await this.getConnection(conversation);
 			const connection = this.connections.get(conversation.id);
@@ -274,16 +279,31 @@ export class WebSocketConnectionPool {
 			// Generate unique request ID with chat prefix
 			const requestId = `${conversation.id}_${crypto.randomUUID()}`;
 
+			const senderInboxState = await client.preferences.inboxStateFromInboxIds([message.senderInboxId]);
+			const senderAddresses = senderInboxState?.flatMap((s) => s.identifiers.map((i) => i.identifier));
+
 			// Create request payload
 			const request = {
 				requestId,
 				chatId: conversation.id,
-				prompt: message,
+				prompt: message.formattedContent,
+				context: {
+					senderInboxId: message.senderInboxId,
+					sentAtNs: message.sentAtNs,
+					addresses: senderAddresses,
+				},
 			};
 
 			// Send the request
 			ws.send(JSON.stringify(request));
 			console.log(`WebSocket request sent for chat ${conversation.id}:`, request);
+
+			// react to the message so the user knows that the bot is thinking
+			await conversation.send(
+				// biome-ignore lint/suspicious/noExplicitAny: TODO: fix sending other content types with type-safety
+				{ reference: message.id, action: 'added', content: '👀' } as any,
+				ContentTypeReaction,
+			);
 
 			// Wait for response with timeout.  The promise resolves once `handleMessage` receives the
 			// corresponding response and calls `request.resolve`.

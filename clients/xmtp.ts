@@ -1,8 +1,19 @@
-import type { Client, Signer } from "@xmtp/node-sdk";
-import { IdentifierKind } from "@xmtp/node-sdk";
-import { createWalletClient, http, toBytes } from "viem";
-import { privateKeyToAccount } from "viem/accounts";
-import { sepolia } from "viem/chains";
+import { IdentifierKind } from '@xmtp/node-sdk';
+import { createWalletClient, http, toBytes } from 'viem';
+import { privateKeyToAccount } from 'viem/accounts';
+import { sepolia } from 'viem/chains';
+
+import type { Reaction } from '@xmtp/content-type-reaction';
+import type { Client, DecodedMessage, Signer } from '@xmtp/node-sdk';
+import type { mlsTranscriptMessages } from '@xmtp/proto';
+
+type GroupUpdated = mlsTranscriptMessages.GroupUpdated;
+
+export type XmtpClient = Client<string | Reaction | GroupUpdated>;
+export type XmtpConversation = NonNullable<Awaited<ReturnType<XmtpClient['conversations']['getConversationById']>>>;
+export type XmtpMessage<HasFormattedContent extends boolean = false> = HasFormattedContent extends true
+	? DecodedMessage & { formattedContent: string }
+	: DecodedMessage & { formattedContent?: string };
 
 interface User {
 	key: `0x${string}`;
@@ -24,10 +35,10 @@ export const createUser = (key: string): User => {
 };
 
 export const createSigner = (key: string): Signer => {
-	const sanitizedKey = key.startsWith("0x") ? key : `0x${key}`;
+	const sanitizedKey = key.startsWith('0x') ? key : `0x${key}`;
 	const user = createUser(sanitizedKey);
 	return {
-		type: "EOA",
+		type: 'EOA',
 		getIdentifier: () => ({
 			identifierKind: IdentifierKind.Ethereum,
 			identifier: user.account.address.toLowerCase(),
@@ -42,26 +53,19 @@ export const createSigner = (key: string): Signer => {
 	};
 };
 
-export const logAgentDetails = async (
-	clients: Client | Client[],
-): Promise<void> => {
+export const logAgentDetails = async (clients: Client | Client[]): Promise<void> => {
 	const clientArray = Array.isArray(clients) ? clients : [clients];
-	const clientsByAddress = clientArray.reduce<Record<string, Client[]>>(
-		(acc, client) => {
-			const address = client.accountIdentifier?.identifier as string;
-			acc[address] = acc[address] ?? [];
-			acc[address].push(client);
-			return acc;
-		},
-		{},
-	);
+	const clientsByAddress = clientArray.reduce<Record<string, Client[]>>((acc, client) => {
+		const address = client.accountIdentifier?.identifier as string;
+		acc[address] = acc[address] ?? [];
+		acc[address].push(client);
+		return acc;
+	}, {});
 
 	for (const [address, clientGroup] of Object.entries(clientsByAddress)) {
 		const firstClient = clientGroup[0]!;
 		const inboxId = firstClient.inboxId;
-		const environments = clientGroup
-			.map((c: Client) => c.options?.env ?? "dev")
-			.join(", ");
+		const environments = clientGroup.map((c: Client) => c.options?.env ?? 'dev').join(', ');
 		console.log(`\x1b[38;2;252;76;52m
         ██╗  ██╗███╗   ███╗████████╗██████╗ 
         ╚██╗██╔╝████╗ ████║╚══██╔══╝██╔══██╗
@@ -83,6 +87,6 @@ export const logAgentDetails = async (
     • Conversations: ${conversations.length}
     • InboxId: ${inboxId}
     • Networks: ${environments}
-    ${urls.map((url) => `• URL: ${url}`).join("\n")}`);
+    ${urls.map((url) => `• URL: ${url}`).join('\n')}`);
 	}
 };
