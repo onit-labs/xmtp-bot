@@ -6,11 +6,12 @@ import { handleCopyCommand } from '#handlers/commands/copy.ts';
 import { handleListCommand } from '#handlers/commands/list.ts';
 import { callBot } from '#helpers/onit.ts';
 
-import { Client, type DecodedMessage } from '@xmtp/node-sdk';
+import type { DecodedMessage } from '@xmtp/node-sdk';
+import type { XmtpClient, XmtpConversation, XmtpMessage } from '#clients/xmtp.ts';
 
-import type { Client as XmtpClient } from '@xmtp/node-sdk';
-import type { XmtpConversation } from '#types.ts';
-
+function isFormattedMessage(message: XmtpMessage): message is XmtpMessage<true> {
+	return message.formattedContent !== undefined;
+}
 
 /**
  * Handle incoming XMTP messages.
@@ -18,17 +19,23 @@ import type { XmtpConversation } from '#types.ts';
  * @param message - The decoded XMTP message
  * @param client - The XMTP client instance
  */
-export async function handleMessage(message: DecodedMessage, client: Client) {
+export async function handleMessage(message: XmtpMessage, client: XmtpClient) {
 	let conversation: XmtpConversation | null = null;
 	try {
-		const senderAddress = message.senderInboxId;
+		const senderInboxId = message.senderInboxId;
 		const botAddress = client.inboxId.toLowerCase();
 
 		// Ignore messages from the bot itself
-		if (senderAddress.toLowerCase() === botAddress) return;
+		if (senderInboxId.toLowerCase() === botAddress) return;
 
-		const messageContent = extractMessageContent(message);
-		console.log(`MESSAGE RECEIVED: ${messageContent} from ${senderAddress}`);
+		// Extract the message content from the message & store it in the message object
+		message.formattedContent = extractMessageContent(message);
+
+		if (!isFormattedMessage(message)) {
+			throw new Error(`Unable to extract message content, skipping`);
+		}
+
+		console.log(`MESSAGE RECEIVED: ${message.formattedContent} from ${senderInboxId}`);
 
 		// Get the conversation first
 		conversation = (await client.conversations.getConversationById(message.conversationId)) as XmtpConversation | null;
@@ -39,28 +46,28 @@ export async function handleMessage(message: DecodedMessage, client: Client) {
 		// Check if message should trigger the Onit agent
 		if (!(await shouldRespondToMessage(message, client.inboxId, client))) {
 			// Check if they mentioned the bot but didn't use proper triggers
-			if (shouldSendHelpHint(messageContent)) {
+			if (shouldSendHelpHint(message.formattedContent)) {
 				const helpMessage =
 					"👋 Hi! I'm the Onit agent. You asked for help! Try to invoke the agent with @onit or just @onit.base.eth\n";
 				await conversation.send(helpMessage);
-				console.log(`NEW MESSAGE SENT: ${helpMessage} to ${senderAddress}`);
+				console.log(`NEW MESSAGE SENT: ${helpMessage} to ${senderInboxId}`);
 			}
 			return;
 		}
 
 		// Get the sender's wallet address
-		const senderInboxState = await client.preferences.inboxStateFromInboxIds([senderAddress]);
+		const senderInboxState = await client.preferences.inboxStateFromInboxIds([senderInboxId]);
 		const senderWalletAddress = senderInboxState?.[0]?.recoveryIdentifier?.identifier;
 
 		if (!senderWalletAddress) throw new Error(`Unable to find sender wallet address, skipping`);
 
-		const response = await processMessage(messageContent, conversation, client);
+		const response = await processMessage(message, conversation, client);
 
 		// Don't send "TOOL_HANDLED" responses - these indicate tools have already sent direct messages
 		if (response.trim() === 'TOOL_HANDLED') return;
 
-		const _sentMessageId = await conversation.send(response);
-		console.log(`NEW MESSAGE SENT: ${response} to ${senderAddress}`);
+		await conversation.send(response);
+		console.log(`NEW MESSAGE SENT: ${response} to ${senderInboxId}`);
 	} catch (error) {
 		if (conversation) {
 			const errorMessage = 'I encountered an error while processing your request. Please try again later.';
@@ -78,16 +85,20 @@ export async function handleMessage(message: DecodedMessage, client: Client) {
  * @param client - The XMTP client
  * @returns The processed response as a string
  */
-async function processMessage(message: string, conversation: XmtpConversation, client: XmtpClient): Promise<string> {
+async function processMessage(
+	message: XmtpMessage<true>,
+	conversation: XmtpConversation,
+	client: XmtpClient,
+): Promise<string> {
 	console.log('Processing message:', message);
 
-	const words = message.split(' ');
+	const words = message.formattedContent.split(' ');
 	const [firstWord, ...rest] = words;
 
 	// If no command found and a trigger is found, call the bot
-	if (!checkForCommand(message) && checkForTrigger(message)) {
-		console.log('calling bot', message, conversation.id);
-		await callBot(message.replace('@onit ', ''), conversation);
+	if (!checkForCommand(message.formattedContent) && checkForTrigger(message.formattedContent)) {
+		console.log('calling bot', message.id, conversation.id);
+		await callBot(message, conversation, client);
 		return 'TOOL_HANDLED';
 	}
 
@@ -143,7 +154,7 @@ async function processMessage(message: string, conversation: XmtpConversation, c
 			}
 			default: {
 				// If command not recognized, try the bot
-				await callBot(message, conversation);
+				await callBot(message, conversation, client);
 				return 'TOOL_HANDLED';
 			}
 		}
@@ -161,13 +172,15 @@ async function processMessage(message: string, conversation: XmtpConversation, c
  * @param client - The XMTP client instance
  * @returns Promise<boolean> - Whether the agent should respond
  */
-async function shouldRespondToMessage(message: DecodedMessage, agentInboxId: string, client: Client): Promise<boolean> {
-	const messageContent = extractMessageContent(message);
-
+async function shouldRespondToMessage(
+	message: XmtpMessage<true>,
+	agentInboxId: string,
+	client: XmtpClient,
+): Promise<boolean> {
 	// Safety check for empty content
-	if (!messageContent || messageContent.trim() === '') return false;
+	if (!message.formattedContent || message.formattedContent.trim() === '') return false;
 
-	const lowerMessage = messageContent.toLowerCase().trim();
+	const lowerMessage = message.formattedContent.toLowerCase().trim();
 
 	if (await isReplyToAgent(message, agentInboxId, client)) return true;
 	if (checkForTrigger(lowerMessage)) return true;
@@ -183,7 +196,7 @@ async function shouldRespondToMessage(message: DecodedMessage, agentInboxId: str
  * @param client - The XMTP client instance
  * @returns Promise<boolean> - Whether the message is a reply to the agent
  */
-async function isReplyToAgent(message: DecodedMessage, agentInboxId: string, client: Client): Promise<boolean> {
+async function isReplyToAgent(message: DecodedMessage, agentInboxId: string, client: XmtpClient): Promise<boolean> {
 	// Check if the message is a reply type
 	if (message.contentType?.typeId === 'reply') {
 		try {
@@ -234,10 +247,13 @@ function shouldSendHelpHint(message: string): boolean {
  * @param message - The decoded XMTP message
  * @returns The message content as a string
  */
-function extractMessageContent(message: DecodedMessage): string {
+function extractMessageContent(message: XmtpMessage<false>): string {
 	// Handle reply messages
+	// TODO: parse content types properly with type-safety
 	if (message.contentType?.typeId === 'reply') {
+		// biome-ignore lint/suspicious/noExplicitAny: TODO: parse content types properly with type-safety
 		const messageAny = message as any;
+		// biome-ignore lint/suspicious/noExplicitAny: TODO: parse content types properly with type-safety
 		const replyContent = message.content as any;
 		console.log(`🔍 Reply content debug:`, replyContent);
 
@@ -309,7 +325,11 @@ const checkForCommand = (message: string) => {
 	return Object.values(commands).some((cmd) => {
 		const cmdStr = cmd.command.toLowerCase();
 		// If the message starts with the command, or is matches the pattern of @onit [cmd] [item]
-		return lowerMessage.startsWith(`/${cmdStr}`) || lowerMessage === `@onit ${cmdStr}` || lowerMessage.match(new RegExp(`^@onit ${cmdStr}\\s+\\S+[\\s.]*$`));
+		return (
+			lowerMessage.startsWith(`/${cmdStr}`) ||
+			lowerMessage === `@onit ${cmdStr}` ||
+			lowerMessage.match(new RegExp(`^@onit ${cmdStr}\\s+\\S+[\\s.]*$`))
+		);
 	});
 };
 

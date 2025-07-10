@@ -3,12 +3,10 @@ import { getMarkets, XMTP_MARKET_TAG } from '#helpers/onit.ts';
 
 import { stripIndents } from 'common-tags';
 
-import type { Client as XmtpClient } from '@xmtp/node-sdk';
 import type { Client } from 'onit-markets';
+import type { XmtpConversation } from '#clients/xmtp.ts';
 
-type Conversation = NonNullable<Awaited<ReturnType<XmtpClient['conversations']['getConversationById']>>>;
-
-export async function handleListCommand(onit: Client, conversation: Conversation, tags: string[] = []) {
+export async function handleListCommand(onit: Client, conversation: XmtpConversation, tags: string[] = []) {
 	// If the first tag is 'private', add the conversation ID as a tag
 	if (tags[0]?.toLowerCase() === 'private') {
 		tags = [`${XMTP_MARKET_TAG}_${conversation.id.toString()}`];
@@ -20,7 +18,7 @@ export async function handleListCommand(onit: Client, conversation: Conversation
 		onit,
 		tags.length > 0
 			? // TODO: sanitize tags
-			{ tags }
+				{ tags }
 			: undefined,
 	);
 
@@ -48,18 +46,23 @@ export async function handleListCommand(onit: Client, conversation: Conversation
 
 	const isSingleTag = tags.length === 1;
 
-	console.log({ tags })
+	console.log({ tags });
 
 	await conversation.send(
 		stripIndents`
-			${tags[0]?.toLowerCase() === 'trending' ? 'Trending Onit Markets:' :
-				tags[0]?.toLowerCase().includes(`${XMTP_MARKET_TAG.toLowerCase()}_`) ? 'Your group\'s private markets:' :
-					'Recent Onit Markets:'}
+			${
+				tags[0]?.toLowerCase() === 'trending'
+					? 'Trending Onit Markets:'
+					: tags[0]?.toLowerCase().includes(`${XMTP_MARKET_TAG.toLowerCase()}_`)
+						? "Your group's private markets:"
+						: 'Recent Onit Markets:'
+			}
 			\n
 			${markets.map((market, index) => `${index + 1}. ${market.question}`).join('\n')}
 
 			Market Addresses:[${markets.map((market) => market.marketAddress).join(' ,')}]
-		`);
+		`,
+	);
 
 	await conversation.send(isSingleTag ? `https://onit.fun/c/${tags.at(0)}` : `https://onit.fun/`);
 }

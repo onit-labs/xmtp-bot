@@ -6,8 +6,17 @@ import {
 	createScoreMarketSchema,
 } from '#validators/market/create.ts';
 
+import type { z } from 'zod';
+
+type Market =
+	| z.infer<typeof createNormalMarketSchema>
+	| z.infer<typeof createPercentageMarketSchema>
+	| z.infer<typeof createScoreMarketSchema>
+	| z.infer<typeof createDaysUntilMarketSchema>
+	| z.infer<typeof createDiscreteMarketSchema>;
+
 export const validateMarket = (marketData: Market) => {
-	let validatedMarket;
+	let validatedMarket: Market | null = null;
 	switch (marketData.marketType) {
 		case 'normal':
 			validatedMarket = createNormalMarketSchema.parse(marketData);

@@ -16,7 +16,7 @@
   "scripts": {
     "start": "node --experimental-strip-types index.ts",
     "generate-keys": "pnpm run scripts/generate-keys.ts",
-    "dev": "node index.ts",
+    "dev": "node --watch --experimental-strip-types index.ts",
     "build": "pnpm build index.ts --outdir ./dist"
   },
   "devDependencies": {
@@ -28,6 +28,7 @@
     "viem": "^2.30.6"
   },
   "dependencies": {
+    "@xmtp/content-type-reaction": "^2.0.2",
     "@xmtp/node-sdk": "^3.1.0",
     "common-tags": "^1.8.2",
     "dotenv": "^17.0.1",
@@ -38,5 +39,8 @@
   },
   "engines": {
     "node": "^22"
+  },
+  "volta": {
+    "node": "22.17.0"
   }
 }
