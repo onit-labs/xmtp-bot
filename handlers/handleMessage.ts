@@ -59,7 +59,7 @@ export async function handleMessage(message: DecodedMessage, client: Client) {
 		// Don't send "TOOL_HANDLED" responses - these indicate tools have already sent direct messages
 		if (response.trim() === 'TOOL_HANDLED') return;
 
-		const sentMessageId = await conversation.send(response);
+		const _sentMessageId = await conversation.send(response);
 		console.log(`NEW MESSAGE SENT: ${response} to ${senderAddress}`);
 	} catch (error) {
 		if (conversation) {
@@ -87,14 +87,8 @@ async function processMessage(message: string, conversation: XmtpConversation, c
 	// If no command found and a trigger is found, call the bot
 	if (!checkForCommand(message) && checkForTrigger(message)) {
 		console.log('calling bot', message, conversation.id);
-		const botResponse = await callBot(message.replace('@onit ', ''), conversation);
-
-		console.log('botResponse', botResponse);
-
-		if (!botResponse.success)
-			return 'Sorry, I encountered an error while processing your request. Please try again later.';
-
-		return botResponse.data.message;
+		await callBot(message.replace('@onit ', ''), conversation);
+		return 'TOOL_HANDLED';
 	}
 
 	let command: string | null = null;
@@ -149,9 +143,8 @@ async function processMessage(message: string, conversation: XmtpConversation, c
 			}
 			default: {
 				// If command not recognized, try the bot
-				const botResponse = await callBot(message, conversation);
-				if (!botResponse.success) return fallbackMessage;
-				return botResponse.data.message;
+				await callBot(message, conversation);
+				return 'TOOL_HANDLED';
 			}
 		}
 	} catch (error: unknown) {

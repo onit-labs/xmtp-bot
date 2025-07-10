@@ -3,6 +3,17 @@ import z from 'zod';
 import type { XmtpConversation } from '#types.ts';
 import { API_URL } from '#constants.ts';
 
+// Response structure returned by the Cloudflare worker.
+// Example: { success: true, data: { requestId: "<id>", chatId: "<chatId>", message: "<bot-response>" } }
+export interface BotResponse {
+	success: boolean;
+	data: {
+		requestId: string;
+		chatId: string;
+		message: string;
+	};
+}
+
 // WebSocket connection pool and request management
 interface WSConnection {
 	ws: WebSocket;
@@ -245,7 +256,7 @@ export class WebSocketConnectionPool {
 		return this.createConnection(conversation);
 	}
 
-	async sendRequest(message: string, conversation: XmtpConversation): Promise<void> {
+	async sendRequest(message: string, conversation: XmtpConversation): Promise<BotResponse> {
 		try {
 			const ws = await this.getConnection(conversation);
 			const connection = this.connections.get(conversation.id);
@@ -269,8 +280,9 @@ export class WebSocketConnectionPool {
 			ws.send(JSON.stringify(request));
 			console.log(`WebSocket request sent for chat ${conversation.id}:`, request);
 
-			// Wait for response with timeout
-			return new Promise<void>((resolve, reject) => {
+			// Wait for response with timeout.  The promise resolves once `handleMessage` receives the
+			// corresponding response and calls `request.resolve`.
+			return new Promise<BotResponse>((resolve, reject) => {
 				const timeout = setTimeout(() => {
 					this.pendingRequests.delete(requestId);
 					reject(new Error('WebSocket request timeout'));
