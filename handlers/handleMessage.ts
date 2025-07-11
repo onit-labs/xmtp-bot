@@ -1,8 +1,6 @@
 import { onitClient } from '#clients/onit.ts';
 import { commands, fallbackMessage } from '#constants/commands.ts';
 import { ONIT_TRIGGERS } from '#constants.ts';
-import { handleBetsCommand } from '#handlers/commands/bets.ts';
-import { handleCopyCommand } from '#handlers/commands/copy.ts';
 import { handleListCommand } from '#handlers/commands/list.ts';
 import { callBot } from '#helpers/onit.ts';
 
@@ -140,26 +138,31 @@ async function processMessage(
 				await handleListCommand(onitClient, conversation, args);
 				return 'TOOL_HANDLED';
 			}
-			case commands.bets.command:
-			case `/${commands.bets.command}`: {
-				const senderInboxState = await client.preferences.inboxStateFromInboxIds([conversation.id]);
-				const senderWalletAddress = senderInboxState?.[0]?.recoveryIdentifier?.identifier;
-				if (!senderWalletAddress) return "Sorry, I couldn't find your wallet address.";
-
-				await handleBetsCommand(onitClient, conversation, client, conversation.id, args);
+			case commands.help.command:
+			case `/${commands.help.command}`: {
+				await conversation.send(fallbackMessage);
 				return 'TOOL_HANDLED';
 			}
-			case commands.copy.command:
-			case `/${commands.copy.command}`: {
-				if (!args[0]) return 'Please specify a market number to copy. Example: /copy 1';
+			// case commands.bets.command:
+			// case `/${commands.bets.command}`: {
+			// 	const senderInboxState = await client.preferences.inboxStateFromInboxIds([conversation.id]);
+			// 	const senderWalletAddress = senderInboxState?.[0]?.recoveryIdentifier?.identifier;
+			// 	if (!senderWalletAddress) return "Sorry, I couldn't find your wallet address.";
 
-				const senderInboxState = await client.preferences.inboxStateFromInboxIds([conversation.id]);
-				const senderWalletAddress = senderInboxState?.[0]?.recoveryIdentifier?.identifier;
-				if (!senderWalletAddress) return "Sorry, I couldn't find your wallet address.";
+			// 	await handleBetsCommand(onitClient, conversation, client, conversation.id, args);
+			// 	return 'TOOL_HANDLED';
+			// }
+			// case commands.copy.command:
+			// case `/${commands.copy.command}`: {
+			// 	if (!args[0]) return 'Please specify a market number to copy. Example: /copy 1';
 
-				await handleCopyCommand(onitClient, conversation, args[0], senderWalletAddress);
-				return 'TOOL_HANDLED';
-			}
+			// 	const senderInboxState = await client.preferences.inboxStateFromInboxIds([conversation.id]);
+			// 	const senderWalletAddress = senderInboxState?.[0]?.recoveryIdentifier?.identifier;
+			// 	if (!senderWalletAddress) return "Sorry, I couldn't find your wallet address.";
+
+			// 	await handleCopyCommand(onitClient, conversation, args[0], senderWalletAddress);
+			// 	return 'TOOL_HANDLED';
+			// }
 			default: {
 				// If command not recognized, try the bot
 				await callBot(message, conversation, client);
@@ -340,11 +343,9 @@ const checkForCommand = (message: string) => {
 	const lowerMessage = message.toLowerCase().trim();
 	return Object.values(commands).some((cmd) => {
 		const cmdStr = cmd.command.toLowerCase();
-		// If the message starts with the command, or is matches the pattern of @onit [cmd] [item]
+		// If the message starts with the command
 		return (
-			lowerMessage.startsWith(`/${cmdStr}`) ||
-			lowerMessage === `@onit ${cmdStr}` ||
-			lowerMessage.match(new RegExp(`^@onit ${cmdStr}\\s+\\S+[\\s.]*$`))
+			lowerMessage.startsWith(`/${cmdStr}`)
 		);
 	});
 };
