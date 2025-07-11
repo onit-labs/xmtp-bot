@@ -29,7 +29,7 @@
   },
   "dependencies": {
     "@xmtp/content-type-reaction": "^2.0.2",
-    "@xmtp/node-sdk": "^3.1.0",
+    "@xmtp/node-sdk": "^3.1.2",
     "common-tags": "^1.8.2",
     "dotenv": "^17.0.1",
     "onit-markets": "^0.1.5",
