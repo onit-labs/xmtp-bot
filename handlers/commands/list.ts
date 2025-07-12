@@ -18,7 +18,7 @@ export async function handleListCommand(onit: Client, conversation: XmtpConversa
 		onit,
 		tags.length > 0
 			? // TODO: sanitize tags
-				{ tags }
+			{ tags }
 			: undefined,
 	);
 
@@ -50,17 +50,14 @@ export async function handleListCommand(onit: Client, conversation: XmtpConversa
 
 	await conversation.send(
 		stripIndents`
-			${
-				tags[0]?.toLowerCase() === 'trending'
-					? 'Trending Onit Markets:'
-					: tags[0]?.toLowerCase().includes(`${XMTP_MARKET_TAG.toLowerCase()}_`)
-						? "Your group's private markets:"
-						: 'Recent Onit Markets:'
+			${tags[0]?.toLowerCase() === 'trending'
+				? 'Trending Onit Markets:'
+				: tags[0]?.toLowerCase().includes(`${XMTP_MARKET_TAG.toLowerCase()}_`)
+					? "Your group's private markets:"
+					: 'Recent Onit Markets:'
 			}
 			\n
 			${markets.map((market, index) => `${index + 1}. ${market.question}`).join('\n')}
-
-			Market Addresses:[${markets.map((market) => market.marketAddress).join(' ,')}]
 		`,
 	);
 
