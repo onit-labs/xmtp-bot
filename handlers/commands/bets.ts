@@ -1,4 +1,4 @@
-import { fallbackMessage } from '#constants/commands.ts';
+import { FALLBACK_MESSAGE } from '#constants/messages.ts';
 import { getBets } from '#helpers/onit.ts';
 import { basenameToAddress } from '#utils/basename-to-address.ts';
 
@@ -29,7 +29,7 @@ export async function handleBetsCommand(
 					stripIndents`
                 Please provide a valid Basename.
 
-                ${fallbackMessage}
+                ${FALLBACK_MESSAGE}
                 `,
 				);
 			}
@@ -42,7 +42,7 @@ export async function handleBetsCommand(
 					stripIndents`
                 Sorry, I couldn't find a user with that Basename.
 
-                ${fallbackMessage}
+                ${FALLBACK_MESSAGE}
                 `,
 				);
 			}
@@ -62,7 +62,7 @@ export async function handleBetsCommand(
 			stripIndents`
             Sorry, I couldn't find the wallet address.
 
-            ${fallbackMessage}
+            ${FALLBACK_MESSAGE}
             `,
 		);
 	}
@@ -74,7 +74,7 @@ export async function handleBetsCommand(
 			stripIndents`
             Sorry, I encountered an error processing your command. ${predictionsResponse.error ?? 'Unknown error'}
 
-            ${fallbackMessage}
+            ${FALLBACK_MESSAGE}
             `,
 		);
 	}
@@ -86,7 +86,7 @@ export async function handleBetsCommand(
 			stripIndents`
             No bets found for ${targetAddress}.
 
-            ${fallbackMessage}
+            ${FALLBACK_MESSAGE}
             `,
 		);
 	}

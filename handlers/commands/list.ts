@@ -1,4 +1,4 @@
-import { fallbackMessage } from '#constants/commands.ts';
+import { FALLBACK_MESSAGE } from '#constants/messages.ts';
 import { getMarkets, XMTP_MARKET_TAG } from '#helpers/onit.ts';
 
 import { stripIndents } from 'common-tags';
@@ -27,7 +27,7 @@ export async function handleListCommand(onit: Client, conversation: XmtpConversa
 			stripIndents`
 			Sorry, I encountered an error processing your command. ${marketsResponse.error ?? 'Unknown error'}
 
-			${fallbackMessage}
+			${FALLBACK_MESSAGE}
 		`,
 		);
 	}
@@ -39,7 +39,7 @@ export async function handleListCommand(onit: Client, conversation: XmtpConversa
 			stripIndents`
 			No markets found.
 
-			${fallbackMessage}
+			${FALLBACK_MESSAGE}
 		`,
 		);
 	}

@@ -1,4 +1,4 @@
-import { fallbackMessage } from '#constants/commands.ts';
+import { FALLBACK_MESSAGE } from '#constants/messages.ts';
 import { getMarket, PRIVATE_MARKET_TAG, postMarket, XMTP_MARKET_TAG } from '#helpers/onit.ts';
 import { checkAddressExists } from '#utils/check-address-exists.ts';
 import { generateInitialBet } from '#utils/dummy-bets.ts';
@@ -30,7 +30,7 @@ import type { Client as XmtpClient } from '@xmtp/node-sdk';
 import type { Client } from 'onit-markets';
             No previous message found. Please use /list first to see available markets.
 
-            ${fallbackMessage}
+            ${FALLBACK_MESSAGE}
             `,
 		);
 	}
@@ -42,7 +42,7 @@ import type { Client } from 'onit-markets';
 			stripIndents`
             Could not find market addresses in the previous message. Please use /list first.
 
-            ${fallbackMessage}
+            ${FALLBACK_MESSAGE}
             `,
 		);
 	}
@@ -55,7 +55,7 @@ import type { Client } from 'onit-markets';
 			stripIndents`
             Invalid market number. Please select a number from the list.
 
-            ${fallbackMessage}
+            ${FALLBACK_MESSAGE}
             `,
 		);
 	}
@@ -69,7 +69,7 @@ import type { Client } from 'onit-markets';
 			stripIndents`
             Invalid market address. Please use /list first.
 
-            ${fallbackMessage}
+            ${FALLBACK_MESSAGE}
             `,
 		);
 	}
@@ -83,7 +83,7 @@ import type { Client } from 'onit-markets';
 			stripIndents`
             Sorry, I encountered an error fetching the market. ${marketResponse.error ?? 'Unknown error'}
 
-            ${fallbackMessage}
+            ${FALLBACK_MESSAGE}
             `,
 		);
 	}
@@ -141,7 +141,7 @@ import type { Client } from 'onit-markets';
 			stripIndents`
                 Invalid market type: ${marketToCopy.marketType}
 
-                ${fallbackMessage}
+                ${FALLBACK_MESSAGE}
                 `,
 		);
 	}
@@ -154,7 +154,7 @@ import type { Client } from 'onit-markets';
 			stripIndents`
             Sorry, I encountered an error copying the market.'}
 
-            ${fallbackMessage}
+            ${FALLBACK_MESSAGE}
             `,
 		);
 	}

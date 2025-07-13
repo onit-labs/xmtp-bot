@@ -1,6 +1,7 @@
 import { onitClient } from '#clients/onit.ts';
-import { commands, fallbackMessage } from '#constants/commands.ts';
-import { ONIT_TRIGGERS } from '#constants.ts';
+import { commands } from '#constants/commands.ts';
+import { ONIT_TRIGGERS } from '#constants/index.ts';
+import { FALLBACK_MESSAGE } from '#constants/messages.ts';
 import { handleListCommand } from '#handlers/commands/list.ts';
 import { callBot } from '#helpers/onit.ts';
 
@@ -48,10 +49,8 @@ export async function handleMessage(message: XmtpMessage, client: XmtpClient) {
 		if (!shouldRespond) {
 			// Check if they mentioned the bot but didn't use proper triggers
 			if (shouldSendHelpHint(message.formattedContent)) {
-				const helpMessage =
-					"👋 Hi! I'm the Onit agent. You asked for help! Try to invoke the agent with @onit or @onit.base.eth\n";
-				await conversation.send(helpMessage);
-				console.log(`NEW MESSAGE SENT: ${helpMessage} to ${senderInboxId}`);
+				await conversation.send(FALLBACK_MESSAGE);
+				console.log(`NEW MESSAGE SENT: ${FALLBACK_MESSAGE} to ${senderInboxId}`);
 			}
 			return;
 		}
@@ -152,15 +151,17 @@ async function processMessage(
 	const words = message.formattedContent.split(' ');
 	const [firstWord, ...rest] = words;
 
-	// If no command found and a trigger is found, call the bot or if it's a direct message or a reply to the agent
-	if (
-		(!checkForCommand(message.formattedContent) && checkForTrigger(message.formattedContent)) ||
-		(await isDirectMessage(message, client)) ||
-		(await isReplyToAgent(message, client.inboxId, client))
-	) {
-		console.log('calling bot', message.id, conversation.id);
-		const response = await callBot(message, conversation, client);
-		return response.data.message;
+	// If a command is detected, don't call the bot - handle the command instead
+	if (!checkForCommand(message.formattedContent)) {
+		// If no command found and a trigger is found, call the bot or if it's a direct message or a reply to the agent
+		if (
+			checkForTrigger(message.formattedContent) ||
+			(await isDirectMessage(message, client)) ||
+			(await isReplyToAgent(message, client.inboxId, client))
+		) {
+			const response = await callBot(message, conversation, client);
+			return response.data.message;
+		}
 	}
 
 	let command: string | null = null;
@@ -195,7 +196,7 @@ async function processMessage(
 			}
 			case commands.help.command:
 			case `/${commands.help.command}`: {
-				await conversation.send(fallbackMessage);
+				await conversation.send(FALLBACK_MESSAGE);
 				return 'TOOL_HANDLED';
 			}
 			// case commands.bets.command:
@@ -227,7 +228,7 @@ async function processMessage(
 	} catch (error: unknown) {
 		const errorMessage = error instanceof Error ? error.message : String(error);
 		console.error('Error processing command:', errorMessage);
-		return 'Sorry, I encountered an error processing your command.\n\n' + fallbackMessage;
+		return 'Sorry, I encountered an error processing your command.\n\n' + FALLBACK_MESSAGE;
 	}
 }
 
@@ -396,7 +397,9 @@ function extractMessageContent(message: XmtpMessage<false>): string {
 
 const checkForCommand = (message: string) => {
 	const lowerMessage = message.toLowerCase().trim();
+	console.log('checkForCommand', lowerMessage);
 	return Object.values(commands).some((cmd) => {
+		console.log('cmd', cmd);
 		const cmdStr = cmd.command.toLowerCase();
 		// If the message starts with the command
 		return (
