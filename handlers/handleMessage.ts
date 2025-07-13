@@ -69,14 +69,68 @@ export async function handleMessage(message: XmtpMessage, client: XmtpClient) {
 		// Don't send "TOOL_HANDLED" responses - these indicate tools have already sent direct messages
 		if (response.trim() === 'TOOL_HANDLED') return;
 
-		await conversation.send(response);
-		console.log(`NEW MESSAGE SENT: ${response} to ${senderInboxId}`);
+		// Separate Onit links from the response
+		const { cleanedMessage, extractedLinks } = separateOnitLinks(response);
+
+		// Send the cleaned message if it's not empty
+		if (cleanedMessage.trim()) {
+			await conversation.send(cleanedMessage);
+			console.log(`NEW MESSAGE SENT: ${cleanedMessage} to ${senderInboxId}`);
+		}
+
+		// Send each extracted Onit link as a separate message
+		for (const link of extractedLinks) {
+			await conversation.send(link);
+			console.log(`NEW ONIT LINK SENT: ${link} to ${senderInboxId}`);
+		}
 	} catch (error) {
 		if (conversation) {
 			const errorMessage = 'I encountered an error while processing your request. Please try again later.';
 			await conversation.send(errorMessage);
 			console.log(`MESSAGE SENT: ${errorMessage} to ${message.senderInboxId}`);
 		}
+	}
+}
+
+/**
+ * Separate Onit links from a message
+ * @param message - The message to separate links from
+ * @returns An object containing the cleaned message and the extracted links
+ * @dev - required as links with other text in xmtp don't show the OG properly
+ */
+function separateOnitLinks(message: string): { cleanedMessage: string; extractedLinks: string[] } {
+	try {
+		// Input validation
+		if (!message || typeof message !== 'string') {
+			return { cleanedMessage: message || '', extractedLinks: [] };
+		}
+
+		// Standard URL regex pattern that handles query params, fragments, and stops at sentence punctuation
+		const onitUrlRegex = /https:\/\/onit\.fun\/[^\s<>"{}|\\^`\[\]]*[^\s<>"{}|\\^`\[\].,!?;:)]/g;
+
+		const matches = message.match(onitUrlRegex);
+
+		if (!matches || matches.length === 0) {
+			return { cleanedMessage: message, extractedLinks: [] };
+		}
+
+		// Extract the full URLs
+		const extractedLinks = matches;
+
+		// Remove the links from the original message
+		let cleanedMessage = message;
+		matches.forEach((match) => {
+			cleanedMessage = cleanedMessage.replace(match, '').trim();
+		});
+
+		// Clean up any extra whitespace
+		cleanedMessage = cleanedMessage.replace(/\s+/g, ' ').trim();
+
+		return { cleanedMessage, extractedLinks };
+	} catch (error) {
+		// If anything goes wrong, return the original message unchanged
+		console.error('Error in separateOnitLinks:', error);
+		return { cleanedMessage: message, extractedLinks: [] };
 	}
 }
 
