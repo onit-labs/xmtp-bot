@@ -49,7 +49,7 @@ export async function handleMessage(message: XmtpMessage, client: XmtpClient) {
 			// Check if they mentioned the bot but didn't use proper triggers
 			if (shouldSendHelpHint(message.formattedContent)) {
 				const helpMessage =
-					"👋 Hi! I'm the Onit agent. You asked for help! Try to invoke the agent with @onit or just @onit.base.eth\n";
+					"👋 Hi! I'm the Onit agent. You asked for help! Try to invoke the agent with @onit or @onit.base.eth\n";
 				await conversation.send(helpMessage);
 				console.log(`NEW MESSAGE SENT: ${helpMessage} to ${senderInboxId}`);
 			}
@@ -152,10 +152,11 @@ async function processMessage(
 	const words = message.formattedContent.split(' ');
 	const [firstWord, ...rest] = words;
 
-	// If no command found and a trigger is found, call the bot
+	// If no command found and a trigger is found, call the bot or if it's a direct message or a reply to the agent
 	if (
 		(!checkForCommand(message.formattedContent) && checkForTrigger(message.formattedContent)) ||
-		(await isDirectMessage(message, client))
+		(await isDirectMessage(message, client)) ||
+		(await isReplyToAgent(message, client.inboxId, client))
 	) {
 		console.log('calling bot', message.id, conversation.id);
 		const response = await callBot(message, conversation, client);
