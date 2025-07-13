@@ -1,6 +1,7 @@
 import { createSigner, logAgentDetails, type XmtpClient } from '#clients/xmtp.ts';
 import { ENCRYPTION_KEY, WALLET_KEY, XMTP_ENV } from '#constants.ts';
 import { handleMessage } from '#handlers/handleMessage.ts';
+import { sendWelcomeMessage } from '#handlers/handleConversation.ts';
 
 import { ReactionCodec } from '@xmtp/content-type-reaction';
 import { Client, type XmtpEnv } from '@xmtp/node-sdk';
@@ -37,6 +38,28 @@ async function initializeXmtpClient() {
 }
 
 /**
+ * Start streaming new conversations and send welcome messages
+ * @param client - The XMTP client instance
+ */
+export async function startConversationListener(client: XmtpClient): Promise<void> {
+	try {
+		console.log('Starting conversation listener for welcome messages...');
+
+		// Stream new conversations
+		const conversationStream = client.conversations.stream();
+
+		for await (const conversation of conversationStream) {
+			if (conversation) {
+				console.log(`New conversation detected: ${conversation.id}`);
+				sendWelcomeMessage(conversation, client);
+			}
+		}
+	} catch (error) {
+		console.error('Error in conversation listener:', error);
+	}
+}
+
+/**
  * Start listening for XMTP messages.
  *
  * @param client - The XMTP client instance
@@ -56,9 +79,20 @@ async function main() {
 
 	const client = await initializeXmtpClient();
 
-	console.log('Waiting for messages...');
+	// // Start the welcome message system (check existing conversations first)
+	// console.log('Checking for existing conversations...');
+	// await checkForNewConversations(client);
 
-	await startMessageListener(client);
+	// Start both message listener and conversation listener in parallel
+	console.log('Starting listeners...');
+	await Promise.all([
+		startMessageListener(client),
+		startConversationListener(client),
+	]);
 }
 
-main().catch(console.error);
+// Start the bot
+main().catch((error) => {
+	console.error('Failed to start bot:', error);
+	process.exit(1);
+});
