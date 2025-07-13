@@ -3,7 +3,7 @@ import { WELCOME_MESSAGES } from '#constants/messages.ts';
 import type { XmtpClient, XmtpConversation } from '#clients/xmtp.ts';
 
 // TODO store all conversations in case we want to go back an update with new capabilities
-const welcomeMessagesSent = new Set<string>();
+// const welcomeMessagesSent = new Set<string>();
 
 /**
  * Tracks the last sync time to detect new conversations
@@ -31,6 +31,9 @@ let lastSyncTime = Date.now();
 //     }
 // }
 
+// TMP fix to avoid breaking old conversations
+const WELCOME_MESSAGE_CUTOFF_TIMESTAMP = 1752433813000;
+
 /**
  * Send a welcome message to a conversation
  * @param conversation - The conversation to send the welcome message to
@@ -38,10 +41,17 @@ let lastSyncTime = Date.now();
  */
 export async function sendWelcomeMessage(conversation: XmtpConversation, client: XmtpClient): Promise<void> {
     try {
-        // Skip if we've already sent a welcome message to this conversation
-        if (welcomeMessagesSent.has(conversation.id)) {
+        // Skip conversations created before the specified timestamp (1752433813 in seconds)
+        const conversationCreatedAt = new Date(conversation.createdAt).getTime();
+        if (conversationCreatedAt < WELCOME_MESSAGE_CUTOFF_TIMESTAMP) {
+            console.log(`Skipping welcome message for conversation ${conversation.id} (created before cutoff: ${new Date(conversationCreatedAt).toISOString()})`);
             return;
         }
+
+        // // Skip if we've already sent a welcome message to this conversation
+        // if (welcomeMessagesSent.has(conversation.id)) {
+        //     return;
+        // }
 
         // Get conversation metadata to determine if it's a DM or group
         const metadata = await conversation.metadata();
@@ -54,7 +64,7 @@ export async function sendWelcomeMessage(conversation: XmtpConversation, client:
         await conversation.send(welcomeMessage);
 
         // Mark this conversation as having received a welcome message
-        welcomeMessagesSent.add(conversation.id);
+        //welcomeMessagesSent.add(conversation.id);
 
         console.log(`Welcome message sent to ${isDirectMessage ? 'DM' : 'group'} conversation: ${conversation.id}`);
     } catch (error) {

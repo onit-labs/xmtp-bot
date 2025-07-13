@@ -51,7 +51,7 @@ export async function startConversationListener(client: XmtpClient): Promise<voi
 		for await (const conversation of conversationStream) {
 			if (conversation) {
 				console.log(`New conversation detected: ${conversation.id}`);
-				sendWelcomeMessage(conversation, client);
+				await sendWelcomeMessage(conversation, client);
 			}
 		}
 	} catch (error) {
