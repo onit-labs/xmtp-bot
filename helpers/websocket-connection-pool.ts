@@ -300,8 +300,7 @@ export class WebSocketConnectionPool {
 
 			// react to the message so the user knows that the bot is thinking
 			await conversation.send(
-				// biome-ignore lint/suspicious/noExplicitAny: TODO: fix sending other content types with type-safety
-				{ reference: message.id, action: 'added', content: '👀' } as any,
+				{ reference: message.id, action: 'added', content: '👀', schema: 'unicode' },
 				ContentTypeReaction,
 			);
 
