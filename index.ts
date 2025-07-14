@@ -49,9 +49,11 @@ export async function startConversationListener(client: XmtpClient): Promise<voi
 		const conversationStream = client.conversations.stream();
 
 		for await (const conversation of conversationStream) {
+			console.log(`New conversation detected: ${conversation?.id}`);
 			if (conversation) {
-				console.log(`New conversation detected: ${conversation.id}`);
-				await sendWelcomeMessage(conversation, client);
+				await sendWelcomeMessage(conversation, client).catch((error) => {
+					console.error('Error in conversation listener:', { conversation, error });
+				});
 			}
 		}
 	} catch (error) {
@@ -68,8 +70,11 @@ async function startMessageListener(client: XmtpClient) {
 	const messageStream = await client.conversations.streamAllMessages();
 
 	for await (const message of messageStream) {
+		console.log(`New message detected: ${message?.id}`);
 		if (message) {
-			await handleMessage(message, client);
+			await handleMessage(message, client).catch((error) => {
+				console.error('Error in message listener:', { message, error });
+			});
 		}
 	}
 }

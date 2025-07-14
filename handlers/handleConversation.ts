@@ -32,7 +32,7 @@ let lastSyncTime = Date.now();
 // }
 
 // TMP fix to avoid breaking old conversations
-const WELCOME_MESSAGE_CUTOFF_TIMESTAMP = 1752433813000;
+const WELCOME_MESSAGE_CUTOFF_TIMESTAMP = 1752493443000;
 
 /**
  * Send a welcome message to a conversation
@@ -40,36 +40,32 @@ const WELCOME_MESSAGE_CUTOFF_TIMESTAMP = 1752433813000;
  * @param client - The XMTP client instance
  */
 export async function sendWelcomeMessage(conversation: XmtpConversation, client: XmtpClient): Promise<void> {
-    try {
-        // Skip conversations created before the specified timestamp (1752433813 in seconds)
-        const conversationCreatedAt = new Date(conversation.createdAt).getTime();
-        if (conversationCreatedAt < WELCOME_MESSAGE_CUTOFF_TIMESTAMP) {
-            console.log(`Skipping welcome message for conversation ${conversation.id} (created before cutoff: ${new Date(conversationCreatedAt).toISOString()})`);
-            return;
-        }
-
-        // // Skip if we've already sent a welcome message to this conversation
-        // if (welcomeMessagesSent.has(conversation.id)) {
-        //     return;
-        // }
-
-        // Get conversation metadata to determine if it's a DM or group
-        const metadata = await conversation.metadata();
-        const isDirectMessage = metadata?.conversationType === 'dm';
-
-        // Select appropriate welcome message
-        const welcomeMessage = isDirectMessage ? WELCOME_MESSAGES.DM : WELCOME_MESSAGES.GROUP;
-
-        // Send the welcome message
-        await conversation.send(welcomeMessage);
-
-        // Mark this conversation as having received a welcome message
-        //welcomeMessagesSent.add(conversation.id);
-
-        console.log(`Welcome message sent to ${isDirectMessage ? 'DM' : 'group'} conversation: ${conversation.id}`);
-    } catch (error) {
-        console.error(`Error sending welcome message to conversation ${conversation.id}:`, error);
+    // Skip conversations created before the specified timestamp (1752433813 in seconds)
+    const conversationCreatedAt = new Date(conversation.createdAt).getTime();
+    if (conversationCreatedAt < WELCOME_MESSAGE_CUTOFF_TIMESTAMP) {
+        console.log(`Skipping welcome message for conversation ${conversation.id} (created before cutoff: ${new Date(conversationCreatedAt).toISOString()})`);
+        return;
     }
+
+    // // Skip if we've already sent a welcome message to this conversation
+    // if (welcomeMessagesSent.has(conversation.id)) {
+    //     return;
+    // }
+
+    // Get conversation metadata to determine if it's a DM or group
+    const metadata = await conversation.metadata();
+    const isDirectMessage = metadata?.conversationType === 'dm';
+
+    // Select appropriate welcome message
+    const welcomeMessage = isDirectMessage ? WELCOME_MESSAGES.DM : WELCOME_MESSAGES.GROUP;
+
+    // Send the welcome message
+    await conversation.send(welcomeMessage);
+
+    // Mark this conversation as having received a welcome message
+    //welcomeMessagesSent.add(conversation.id);
+
+    console.log(`Welcome message sent to ${isDirectMessage ? 'DM' : 'group'} conversation: ${conversation.id}`);
 }
 
 // /**
