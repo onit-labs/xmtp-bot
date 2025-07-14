@@ -4,8 +4,8 @@ import type { Client } from 'onit-markets';
 import type { Address } from 'viem';
 import type { XmtpClient, XmtpConversation, XmtpMessage } from '#clients/xmtp.ts';
 
-export const PRIVATE_MARKET_TAG = '__PRIVATE';
-export const XMTP_MARKET_TAG = '__XMTP';
+export const PRIVATE_MARKET_TAG = '__private';
+export const XMTP_MARKET_TAG = '__xmtp';
 
 // Global connection pool instance
 const wsPool = new WebSocketConnectionPool();
@@ -35,8 +35,8 @@ export async function getMarkets(
 		query: {
 			...(filters?.tags &&
 				filters.tags.length > 0 && {
-					tags: filters.tags.join(','),
-				}),
+				tags: filters.tags.join(','),
+			}),
 			sort: 'createdAt',
 			order: 'desc',
 			limit: 5,
@@ -45,28 +45,28 @@ export async function getMarkets(
 	});
 	return (await marketsResponse.json()) as unknown as
 		| {
-				success: false;
-				error: string;
-		  }
+			success: false;
+			error: string;
+		}
 		| {
-				success: true;
-				data: {
-					markets: {
-						[x: string]: unknown;
-						marketAddress: `0x${string}`;
-						question: string;
-						resolutionCriteria: string;
-						bettingCutoff: null;
-						marketType: 'normal' | 'days-until' | 'spread' | 'percentage';
-						createdAt: string;
-						deployer: {
-							id: string;
-							name: string;
-							pfpUrl: string | null;
-						};
-					}[];
-				};
-		  };
+			success: true;
+			data: {
+				markets: {
+					[x: string]: unknown;
+					marketAddress: `0x${string}`;
+					question: string;
+					resolutionCriteria: string;
+					bettingCutoff: null;
+					marketType: 'normal' | 'days-until' | 'spread' | 'percentage';
+					createdAt: string;
+					deployer: {
+						id: string;
+						name: string;
+						pfpUrl: string | null;
+					};
+				}[];
+			};
+		};
 }
 
 export const getMarket = async (onit: Client, marketAddress: Address) => {
@@ -77,13 +77,13 @@ export const getMarket = async (onit: Client, marketAddress: Address) => {
 	});
 	return (await marketResponse.json()) as unknown as
 		| {
-				success: false;
-				error: string;
-		  }
+			success: false;
+			error: string;
+		}
 		| {
-				success: true;
-				data: unknown;
-		  };
+			success: true;
+			data: unknown;
+		};
 };
 
 export const getBets = async (onit: Client, userAddress: Address) => {
@@ -95,15 +95,15 @@ export const getBets = async (onit: Client, userAddress: Address) => {
 	});
 	return (await betsResponse.json()) as unknown as
 		| {
-				success: false;
-				error: string;
-		  }
+			success: false;
+			error: string;
+		}
 		| {
-				success: true;
-				data: {
-					predictions: unknown[];
-				};
-		  };
+			success: true;
+			data: {
+				predictions: unknown[];
+			};
+		};
 };
 
 export const postMarket = async (onit: Client, market: unknown) => {
@@ -112,16 +112,16 @@ export const postMarket = async (onit: Client, market: unknown) => {
 	});
 	return (await marketResponse.json()) as unknown as
 		| {
-				success: false;
-				error: string;
-		  }
+			success: false;
+			error: string;
+		}
 		| {
-				success: true;
-				data: {
-					marketAddress: `0x${string}`;
-					txHash: `0x${string}`;
-				};
-		  };
+			success: true;
+			data: {
+				marketAddress: `0x${string}`;
+				txHash: `0x${string}`;
+			};
+		};
 };
 
 export const callBot = async (message: XmtpMessage<true>, conversation: XmtpConversation, client: XmtpClient) => {
