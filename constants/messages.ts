@@ -21,7 +21,7 @@ export const FALLBACK_MESSAGE = `👋 Hi I'm the Onit prediction market agent!
 
 /* Welcome message constants */
 export const WELCOME_MESSAGES = {
-    DM: `👋 Hi I'm the Onit prediction market agent! 
+    DM: `👋 Hi I'm the Onit prediction market agent! Add me to a group chat to use all my features.
 
 💡 Onit is a prediction market platform where you can bet on everything from 'What price will Bitcoin hit next month?' to 'Who will win the World Cup?'.
 

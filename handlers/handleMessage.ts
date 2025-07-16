@@ -71,9 +71,11 @@ export async function handleMessage(message: XmtpMessage, client: XmtpClient) {
 		// Separate Onit links from the response
 		const { cleanedMessage, extractedLinks } = separateOnitLinks(response);
 
+		const dm = await isDirectMessage(message, client);
+
 		// Send the cleaned message if it's not empty
 		if (cleanedMessage.trim()) {
-			await conversation.send(cleanedMessage);
+			await conversation.send(`${cleanedMessage}${dm ? '\n\n(PS. I\'m better in group chats, add me with some friends!)' : ''}`);
 			console.log(`NEW MESSAGE SENT: ${cleanedMessage} to ${senderInboxId}`);
 		}
 
