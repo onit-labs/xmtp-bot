@@ -4,8 +4,14 @@ import { handleMessage } from '#handlers/handleMessage.ts';
 import { sendWelcomeMessage } from '#handlers/handleConversation.ts';
 
 import { ReactionCodec } from '@xmtp/content-type-reaction';
-import { Client, type XmtpEnv } from '@xmtp/node-sdk';
+import { Client, type DecodedMessage, type XmtpEnv } from '@xmtp/node-sdk';
 import { toBytes } from 'viem/utils';
+
+const MAX_RETRIES = 5;
+// wait 5 seconds before each retry
+const RETRY_INTERVAL = 5000;
+
+let retries = MAX_RETRIES;
 
 /**
  * Initialize the XMTP client.
@@ -66,18 +72,54 @@ export async function startConversationListener(client: XmtpClient): Promise<voi
  *
  * @param client - The XMTP client instance
  */
-async function startMessageListener(client: XmtpClient) {
-	const messageStream = await client.conversations.streamAllMessages();
+const handleStream = async (client: XmtpClient) => {
+	console.log('Syncing conversations...');
+	await client.conversations.sync();
 
-	for await (const message of messageStream) {
-		console.log(`New message detected: ${message?.id}`);
-		if (message) {
-			await handleMessage(message, client).catch((error) => {
-				console.error('Error in message listener:', { message, error });
-			});
-		}
+	await client.conversations.streamAllMessages(
+		(err, message) => onMessage(err, client, message),
+		undefined,
+		undefined,
+		() => onFail(client)(),
+	);
+};
+
+const onMessage = (err: Error | null, client: XmtpClient, message?: DecodedMessage) => {
+	if (err) {
+		console.error('Error in message stream:', err);
+		onFail(client)();
+		return;
 	}
-}
+
+	if (message) {
+		console.log('New message received');
+		//reset count
+		retries = MAX_RETRIES;
+		handleMessage(message, client).catch((error) => {
+			console.error('Error in message listener:', { message, error });
+		});
+	}
+};
+
+const retry = (client: XmtpClient) => {
+	console.log(`Retrying in ${RETRY_INTERVAL / 1000}s, ${retries} retries left`);
+	if (retries > 0) {
+		retries--;
+		setTimeout(() => {
+			handleStream(client);
+		}, RETRY_INTERVAL);
+	} else {
+		console.log('Max retries reached, ending process');
+		process.exit(1);
+	}
+};
+
+const onFail = (client: XmtpClient) => {
+	return () => {
+		console.log('Stream failed');
+		retry(client);
+	};
+};
 
 async function main() {
 	console.log('Initializing Onit XMTP Agent');
@@ -90,10 +132,7 @@ async function main() {
 
 	// Start both message listener and conversation listener in parallel
 	console.log('Starting listeners...');
-	await Promise.all([
-		startMessageListener(client),
-		startConversationListener(client),
-	]);
+	await Promise.all([handleStream(client), startConversationListener(client)]);
 }
 
 // Start the bot
