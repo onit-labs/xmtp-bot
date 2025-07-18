@@ -1,15 +1,15 @@
-#!/usr/bin/env node
+#!/usr/bin/env -S node --experimental-strip-types
 
-import { createSigner } from "#clients/xmtp.ts";
-import { ENCRYPTION_KEY, WALLET_KEY } from "#constants.ts";
+import { createSigner } from '#clients/xmtp.ts';
+import { ENCRYPTION_KEY, WALLET_KEY } from '#constants.ts';
 
-import { Client } from "@xmtp/node-sdk";
-import { toBytes } from "viem/utils";
+import { Client } from '@xmtp/node-sdk';
+import { toBytes } from 'viem/utils';
 
 // Get environment from command line argument, default to 'production'
-const environment = process.argv[2] || "dev";
+const environment = process.argv[2] || 'dev';
 
-if (!["dev", "production"].includes(environment)) {
+if (!['dev', 'production'].includes(environment)) {
 	console.error("Invalid environment. Must be 'dev' or 'production'");
 	process.exit(1);
 }
@@ -27,22 +27,17 @@ async function staticRevokeInstallations() {
 	/* Initialize the xmtp client */
 	const client = await Client.create(signer, {
 		dbEncryptionKey,
-		env: environment as "dev" | "production",
+		env: environment as 'dev' | 'production',
 	});
 
-	const inboxStates = await Client.inboxStateFromInboxIds(
-		[client.inboxId],
-		environment as "dev" | "production",
-	);
+	const inboxStates = await Client.inboxStateFromInboxIds([client.inboxId], environment as 'dev' | 'production');
 
-	console.log("✓ Fetched inbox states:", inboxStates);
+	console.log('✓ Fetched inbox states:', inboxStates);
 
-	const toRevokeInstallationBytes = inboxStates[0]?.installations.map(
-		(i) => i.bytes,
-	);
+	const toRevokeInstallationBytes = inboxStates[0]?.installations.map((i) => i.bytes);
 
 	if (!toRevokeInstallationBytes || toRevokeInstallationBytes.length === 0) {
-		console.log("No installations to revoke.");
+		console.log('No installations to revoke.');
 		return;
 	}
 
@@ -50,17 +45,17 @@ async function staticRevokeInstallations() {
 		signer,
 		client.inboxId,
 		toRevokeInstallationBytes,
-		environment as "dev" | "production",
+		environment as 'dev' | 'production',
 	).catch((error) => {
-		console.error("Error revoking installations:", error);
+		console.error('Error revoking installations:', error);
 	});
 }
 
 staticRevokeInstallations()
 	.then(() => {
-		console.log("✓ Static revoke installations completed successfully.");
+		console.log('✓ Static revoke installations completed successfully.');
 	})
 	.catch((error) => {
-		console.error("Error during static revoke installations:", error);
+		console.error('Error during static revoke installations:', error);
 		process.exit(1);
 	});
