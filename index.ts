@@ -90,6 +90,11 @@ export async function createConversationStream(client: XmtpClient): Promise<void
 				const errorMessage = error instanceof Error ? error.message : String(error);
 				console.error('❌ Error processing new conversation:', errorMessage);
 
+				if (errorMessage.includes('group with welcome id')) {
+					console.warn('⚠️ Group welcome message error - continuing stream');
+					continue;
+				}
+
 				if (errorMessage.includes('conversation not found') || errorMessage.includes('invalid conversation')) {
 					console.warn('⚠️ Invalid conversation error - continuing stream');
 					continue;
