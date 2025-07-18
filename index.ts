@@ -4,7 +4,7 @@ import { sendWelcomeMessage } from '#handlers/handleConversation.ts';
 import { handleMessage } from '#handlers/handleMessage.ts';
 
 import { ReactionCodec } from '@xmtp/content-type-reaction';
-import { Client, type DecodedMessage, type XmtpEnv } from '@xmtp/node-sdk';
+import { Client, type XmtpEnv } from '@xmtp/node-sdk';
 import { toBytes } from 'viem/utils';
 
 // Circuit breaker configuration
@@ -66,63 +66,110 @@ async function initializeXmtpClient() {
 }
 
 /**
- * Start streaming new conversations and send welcome messages
+ * Start streaming new conversations and send welcome messages using async iterator pattern
  * @param client - The XMTP client instance
  */
 export async function createConversationStream(client: XmtpClient): Promise<void> {
-	console.log('📞 Starting conversation listener for welcome messages...');
+	console.log('📞 Starting conversation listener...');
 
-	// Stream new conversations
-	client.conversations.stream((err, conversation) => {
-		if (err) {
-			console.error('Error in conversation stream:', err);
-			//
-			return;
-		}
+	try {
+		const stream = await client.conversations.stream();
+		console.log('✅ XMTP conversation stream active - waiting for new conversations...');
 
-		console.log(`New conversation detected: ${conversation?.id}`);
-		if (conversation) {
-			// Reset restart counter on successful conversation detection
-			conversationStreamTracker.restartCount = Math.max(0, conversationStreamTracker.restartCount - 1);
+		for await (const conversation of stream) {
+			if (!conversation) continue;
+
 			try {
-				void sendWelcomeMessage(conversation, client);
-			} catch (error) {
-				console.error('Error in conversation listener:', { conversation, error });
+				console.log(`New conversation detected: ${conversation.id}`);
+
+				// Reset restart counter on successful conversation detection
+				conversationStreamTracker.restartCount = Math.max(0, conversationStreamTracker.restartCount - 1);
+
+				await sendWelcomeMessage(conversation, client);
+			} catch (error: unknown) {
+				const errorMessage = error instanceof Error ? error.message : String(error);
+				console.error('❌ Error processing new conversation:', errorMessage);
+
+				if (errorMessage.includes('conversation not found') || errorMessage.includes('invalid conversation')) {
+					console.warn('⚠️ Invalid conversation error - continuing stream');
+					continue;
+				}
+
+				// For unknown errors, log more details but continue processing
+				console.error('❌ Unknown conversation error type - continuing stream:', {
+					conversationId: conversation.id,
+					error: errorMessage,
+				});
 			}
 		}
-	}, onConversationStreamFail(client));
+
+		// If we reach here, the stream ended unexpectedly
+		console.warn('⚠️ XMTP conversation stream ended unexpectedly - triggering recovery');
+		throw new Error('XMTP conversation stream ended unexpectedly');
+	} catch (streamError) {
+		const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
+		console.error('❌ Conversation stream error:', errorMessage);
+
+		// Trigger circuit breaker recovery
+		await handleStreamFailureWithBackoff(client, createConversationStream, conversationStreamTracker);
+	}
 }
 
 /**
- * Start listening for XMTP messages.
+ * Start listening for XMTP messages
  *
  * @param client - The XMTP client instance
  */
 async function createMessageStream(client: XmtpClient) {
 	console.log('📡 Creating message stream...');
 
-	await client.conversations.streamAllMessages(
-		(err, message) => onMessage(err, client, message),
-		undefined,
-		undefined,
-		onMessageStreamFail(client),
-	);
-}
+	try {
+		// Get the async iterator stream
+		const stream = await client.conversations.streamAllMessages();
+		console.log('✅ XMTP message stream active - waiting for messages...');
 
-function onMessage(err: Error | null, client: XmtpClient, message?: DecodedMessage) {
-	if (err) {
-		console.error('Error in message stream:', err);
-		handleStreamFailureWithBackoff(client, createMessageStream, messageStreamTracker);
-		return;
+		for await (const message of stream) {
+			if (!message) continue;
+
+			try {
+				// Reset restart counter on successful message processing
+				messageStreamTracker.restartCount = Math.max(0, messageStreamTracker.restartCount - 1);
+
+				await handleMessage(message, client);
+			} catch (error: unknown) {
+				const errorMessage = error instanceof Error ? error.message : String(error);
+				console.error('❌ Error processing message:', errorMessage);
+
+				if (errorMessage.includes('group with welcome id')) {
+					console.warn('⚠️ Group welcome message error - continuing stream');
+					continue;
+				}
+
+				if (errorMessage.includes('sqlcipher') || errorMessage.includes('encryption')) {
+					console.warn('⚠️ Database encryption error - continuing stream');
+					continue;
+				}
+
+				// For unknown errors, log more details but continue processing
+				console.error('❌ Unknown error type - continuing stream:', {
+					messageId: message.id,
+					senderInboxId: message.senderInboxId,
+					conversationId: message.conversationId,
+					error: errorMessage,
+				});
+			}
+		}
+
+		// If we reach here, the stream ended unexpectedly
+		console.warn('⚠️ XMTP message stream ended unexpectedly - triggering recovery');
+		throw new Error('XMTP message stream ended unexpectedly');
+	} catch (streamError) {
+		const errorMessage = streamError instanceof Error ? streamError.message : String(streamError);
+		console.error('❌ Message stream error:', errorMessage);
+
+		// Trigger circuit breaker recovery
+		await handleStreamFailureWithBackoff(client, createMessageStream, messageStreamTracker);
 	}
-
-	if (!message) return;
-
-	// Reset restart counter on successful message processing
-	messageStreamTracker.restartCount = Math.max(0, messageStreamTracker.restartCount - 1);
-	handleMessage(message, client).catch((error) => {
-		console.error('Error in message listener:', { message, error });
-	});
 }
 
 /**
@@ -212,20 +259,6 @@ async function handleStreamRestart(
 		// Trigger another backoff cycle instead of dying
 		await handleStreamFailureWithBackoff(client, streamFunction, tracker);
 	}
-}
-
-function onMessageStreamFail(client: XmtpClient) {
-	return () => {
-		console.log('Message stream failed');
-		handleStreamFailureWithBackoff(client, createMessageStream, messageStreamTracker);
-	};
-}
-
-function onConversationStreamFail(client: XmtpClient) {
-	return () => {
-		console.log('Conversation stream failed');
-		handleStreamFailureWithBackoff(client, createConversationStream, conversationStreamTracker);
-	};
 }
 
 async function main() {
