@@ -62,7 +62,7 @@ export async function createConversationStream(client: XmtpClient): Promise<void
 			console.error('Error in conversation stream:', err);
 
 			// make sure we sync before retrying
-			client.conversations.syncAll([ConsentState.Allowed]).catch((error) => {
+			client.conversations.syncAll().catch((error) => {
 				console.error('Error syncing client:', error);
 			});
 
@@ -177,7 +177,7 @@ function onConversationStreamFail(client: XmtpClient) {
 
 		// sync before starting the stream
 		client.conversations
-			.syncAll([ConsentState.Allowed])
+			.sync()
 			.then(() => retryStream(client, createConversationStream))
 			.catch((error) => console.error('Error syncing client:', error));
 	};
@@ -190,14 +190,7 @@ async function main() {
 
 	// Start both message listener and conversation listener in parallel
 	console.log('Starting listeners...');
-	await Promise.all([
-		createMessageStream(client).catch((error) => {
-			console.error('Error in message stream:', error);
-		}),
-		createConversationStream(client).catch((error) => {
-			console.error('Error in conversation listener:', error);
-		}),
-	]);
+	await Promise.all([createMessageStream(client), createConversationStream(client)]);
 }
 
 // Start the bot
