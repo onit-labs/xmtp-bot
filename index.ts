@@ -60,6 +60,12 @@ export async function createConversationStream(client: XmtpClient): Promise<void
 	client.conversations.stream((err, conversation) => {
 		if (err) {
 			console.error('Error in conversation stream:', err);
+
+			// make sure we sync before retrying
+			client.conversations.syncAll([ConsentState.Allowed]).catch((error) => {
+				console.error('Error syncing client:', error);
+			});
+
 			retryStream(client, createConversationStream);
 			return;
 		}
