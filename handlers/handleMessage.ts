@@ -34,7 +34,7 @@ export async function handleMessage(message: XmtpMessage, client: XmtpClient) {
 			throw new Error(`Unable to extract message content, skipping`);
 		}
 
-		console.log(`MESSAGE RECEIVED: ${message.formattedContent} from ${senderInboxId}`);
+		console.log(`📩 Received message: ${message.formattedContent} from ${senderInboxId}`);
 
 		// Get the conversation first
 		conversation = (await client.conversations.getConversationById(message.conversationId)) as XmtpConversation | null;
@@ -43,7 +43,6 @@ export async function handleMessage(message: XmtpMessage, client: XmtpClient) {
 		}
 
 		const shouldRespond = await shouldRespondToMessage(message, botInboxId, client);
-		console.log('[handleMessage] shouldRespond', shouldRespond);
 
 		// Check if message should trigger the Onit agent
 		if (!shouldRespond) {
@@ -75,7 +74,9 @@ export async function handleMessage(message: XmtpMessage, client: XmtpClient) {
 
 		// Send the cleaned message if it's not empty
 		if (cleanedMessage.trim()) {
-			await conversation.send(`${cleanedMessage}${dm ? '\n\n(PS. I\'m better in group chats, add me with some friends!)' : ''}`);
+			await conversation.send(
+				`${cleanedMessage}${dm ? "\n\n(PS. I'm better in group chats, add me with some friends!)" : ''}`,
+			);
 			console.log(`NEW MESSAGE SENT: ${cleanedMessage} to ${senderInboxId}`);
 		}
 
@@ -230,7 +231,8 @@ async function processMessage(
 	} catch (error: unknown) {
 		const errorMessage = error instanceof Error ? error.message : String(error);
 		console.error('Error processing command:', errorMessage);
-		return 'Sorry, I encountered an error processing your command.\n\n' + FALLBACK_MESSAGE;
+		const dropHiFromFallback = FALLBACK_MESSAGE.split('\n').slice(1).join('\n');
+		return 'Sorry, I encountered an error processing your command.\n' + dropHiFromFallback;
 	}
 }
 
@@ -401,12 +403,9 @@ const checkForCommand = (message: string) => {
 	const lowerMessage = message.toLowerCase().trim();
 	console.log('checkForCommand', lowerMessage);
 	return Object.values(commands).some((cmd) => {
-		console.log('cmd', cmd);
 		const cmdStr = cmd.command.toLowerCase();
 		// If the message starts with the command
-		return (
-			lowerMessage.startsWith(`/${cmdStr}`)
-		);
+		return lowerMessage.startsWith(`/${cmdStr}`);
 	});
 };
 

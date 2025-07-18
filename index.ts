@@ -1,11 +1,20 @@
 import { createSigner, logAgentDetails, type XmtpClient } from '#clients/xmtp.ts';
 import { ENCRYPTION_KEY, WALLET_KEY, XMTP_ENV } from '#constants.ts';
-import { handleMessage } from '#handlers/handleMessage.ts';
 import { sendWelcomeMessage } from '#handlers/handleConversation.ts';
+import { handleMessage } from '#handlers/handleMessage.ts';
 
 import { ReactionCodec } from '@xmtp/content-type-reaction';
-import { Client, type XmtpEnv } from '@xmtp/node-sdk';
+import { Client, ConsentState, type DecodedMessage, type XmtpEnv } from '@xmtp/node-sdk';
 import { toBytes } from 'viem/utils';
+
+const MAX_RETRIES = 5;
+// Base delay for exponential backoff (in milliseconds)
+const BASE_RETRY_DELAY = 1000;
+// Maximum delay cap (30 seconds)
+const MAX_RETRY_DELAY = 30000;
+
+let retries = MAX_RETRIES;
+let conversationRetries = MAX_RETRIES;
 
 /**
  * Initialize the XMTP client.
@@ -29,10 +38,13 @@ async function initializeXmtpClient() {
 	void logAgentDetails(client as Client);
 
 	/* Sync the conversations from the network to update the local db */
-	console.log('✓ Syncing conversations...');
-	console.log(`📝 Agent Inbox ID:`, client.inboxId);
+	console.log('✓ Syncing client...');
 
-	await client.conversations.sync();
+	await client.conversations.syncAll([ConsentState.Allowed]).catch((error) => {
+		console.error('Error syncing client:', error);
+	});
+
+	console.log(`📝 Agent Inbox ID: ${client.inboxId}`);
 
 	return client;
 }
@@ -41,23 +53,53 @@ async function initializeXmtpClient() {
  * Start streaming new conversations and send welcome messages
  * @param client - The XMTP client instance
  */
-export async function startConversationListener(client: XmtpClient): Promise<void> {
+export async function createConversationStream(client: XmtpClient): Promise<void> {
+	console.log('📞 Starting conversation listener for welcome messages...');
+
 	try {
-		console.log('Starting conversation listener for welcome messages...');
-
 		// Stream new conversations
-		const conversationStream = client.conversations.stream();
-
-		for await (const conversation of conversationStream) {
+		for await (const conversation of client.conversations.stream()) {
 			console.log(`New conversation detected: ${conversation?.id}`);
 			if (conversation) {
-				await sendWelcomeMessage(conversation, client).catch((error) => {
+				try {
+					await sendWelcomeMessage(conversation, client);
+				} catch (error) {
 					console.error('Error in conversation listener:', { conversation, error });
-				});
+				}
 			}
 		}
 	} catch (error) {
-		console.error('Error in conversation listener:', error);
+		console.error('Error in conversation stream:', error);
+		retryConversationStream(client);
+	}
+}
+
+/**
+ * Retry the conversation stream with exponential backoff
+ * @param client - The XMTP client instance
+ */
+function retryConversationStream(client: XmtpClient) {
+	if (conversationRetries > 0) {
+		const currentAttempt = MAX_RETRIES - conversationRetries + 1;
+		const delayMs = calculateBackoffDelay(currentAttempt);
+
+		console.log(`🔄 Conversation stream exponential backoff retry:`);
+		console.log(`   • Attempt: ${currentAttempt}/${MAX_RETRIES}`);
+		console.log(`   • Delay: ${(delayMs / 1000).toFixed(1)}s`);
+		console.log(`   • Retries left: ${conversationRetries}`);
+
+		conversationRetries--;
+		setTimeout(async () => {
+			console.log(`⏰ Conversation retry timeout expired, attempting to reconnect...`);
+
+			// Reset retries on successful restart
+			conversationRetries = MAX_RETRIES;
+
+			await createConversationStream(client);
+		}, delayMs);
+	} else {
+		console.log('❌ Max conversation retries reached, ending process');
+		process.exit(1);
 	}
 }
 
@@ -66,17 +108,86 @@ export async function startConversationListener(client: XmtpClient): Promise<voi
  *
  * @param client - The XMTP client instance
  */
-async function startMessageListener(client: XmtpClient) {
-	const messageStream = await client.conversations.streamAllMessages();
+async function createMessageStream(client: XmtpClient) {
+	console.log('📡 Creating message stream...');
 
-	for await (const message of messageStream) {
-		console.log(`New message detected: ${message?.id}`);
-		if (message) {
-			await handleMessage(message, client).catch((error) => {
-				console.error('Error in message listener:', { message, error });
-			});
-		}
+	await client.conversations.streamAllMessages(
+		(err, message) => onMessage(err, client, message),
+		undefined,
+		undefined,
+		onFail(client),
+	);
+}
+
+function onMessage(err: Error | null, client: XmtpClient, message?: DecodedMessage) {
+	if (err) {
+		console.error('Error in message stream:', err);
+		retryMessageStream(client);
+		return;
 	}
+
+	if (!message) return;
+
+	// reset count when we successfully process a message
+	retries = MAX_RETRIES;
+	handleMessage(message, client).catch((error) => {
+		console.error('Error in message listener:', { message, error });
+	});
+}
+
+/**
+ * Calculate exponential backoff delay with jitter
+ * @param attempt - The current attempt number (1-based)
+ * @returns Delay in milliseconds
+ */
+function calculateBackoffDelay(attempt: number): number {
+	const exponentialDelay = BASE_RETRY_DELAY * Math.pow(2, attempt - 1);
+
+	// Apply maximum delay cap
+	const cappedDelay = Math.min(exponentialDelay, MAX_RETRY_DELAY);
+
+	// Add jitter (±25% randomization) to prevent thundering herd
+	const jitter = cappedDelay * 0.25 * (Math.random() * 2 - 1);
+
+	return Math.max(100, cappedDelay + jitter); // Minimum 100ms delay
+}
+
+/**
+ * Retry the message stream with exponential backoff
+ * @param client - The XMTP client instance
+ */
+function retryMessageStream(client: XmtpClient) {
+	if (retries > 0) {
+		const currentAttempt = MAX_RETRIES - retries + 1;
+		const delayMs = calculateBackoffDelay(currentAttempt);
+
+		console.log(`🔄 Exponential backoff retry:`);
+		console.log(`   • Attempt: ${currentAttempt}/${MAX_RETRIES}`);
+		console.log(`   • Delay: ${(delayMs / 1000).toFixed(1)}s`);
+		console.log(`   • Retries left: ${retries}`);
+
+		retries--;
+		setTimeout(async () => {
+			console.log(`⏰ Message retry timeout expired, attempting to reconnect...`);
+
+			// we may have missed some messages, so we need to sync the client again
+			await client.conversations.syncAll([ConsentState.Allowed]).catch((error) => {
+				console.error('Error syncing client:', error);
+			});
+
+			await createMessageStream(client);
+		}, delayMs);
+	} else {
+		console.log('❌ Max retries reached, ending process');
+		process.exit(1);
+	}
+}
+
+function onFail(client: XmtpClient) {
+	return () => {
+		console.log('Stream failed');
+		retryMessageStream(client);
+	};
 }
 
 async function main() {
@@ -84,15 +195,15 @@ async function main() {
 
 	const client = await initializeXmtpClient();
 
-	// // Start the welcome message system (check existing conversations first)
-	// console.log('Checking for existing conversations...');
-	// await checkForNewConversations(client);
-
 	// Start both message listener and conversation listener in parallel
 	console.log('Starting listeners...');
 	await Promise.all([
-		startMessageListener(client),
-		startConversationListener(client),
+		createMessageStream(client).catch((error) => {
+			console.error('Error in message stream:', error);
+		}),
+		createConversationStream(client).catch((error) => {
+			console.error('Error in conversation listener:', error);
+		}),
 	]);
 }
 
