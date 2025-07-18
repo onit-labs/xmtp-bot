@@ -4,17 +4,33 @@ import { sendWelcomeMessage } from '#handlers/handleConversation.ts';
 import { handleMessage } from '#handlers/handleMessage.ts';
 
 import { ReactionCodec } from '@xmtp/content-type-reaction';
-import { Client, ConsentState, type DecodedMessage, type XmtpEnv } from '@xmtp/node-sdk';
+import { Client, type DecodedMessage, type XmtpEnv } from '@xmtp/node-sdk';
 import { toBytes } from 'viem/utils';
 
-const MAX_RETRIES = 5;
-// Base delay for exponential backoff (in milliseconds)
-const BASE_RETRY_DELAY = 1000;
-// Maximum delay cap (30 seconds)
+// Circuit breaker configuration
+const MAX_STREAM_RESTARTS_PER_HOUR = 5;
+const BACKOFF_BASE_MS = 5000;
 const MAX_RETRY_DELAY = 30000;
+const EXTENDED_BACKOFF_CAP = 60 * 60 * 1000; // 1 hour max
 
-let retries = MAX_RETRIES;
-let conversationRetries = MAX_RETRIES;
+// Stream failure tracking
+interface StreamFailureTracker {
+	restartCount: number;
+	lastRestart: number;
+	isInExtendedBackoff: boolean;
+}
+
+const messageStreamTracker: StreamFailureTracker = {
+	restartCount: 0,
+	lastRestart: 0,
+	isInExtendedBackoff: false,
+};
+
+const conversationStreamTracker: StreamFailureTracker = {
+	restartCount: 0,
+	lastRestart: 0,
+	isInExtendedBackoff: false,
+};
 
 /**
  * Initialize the XMTP client.
@@ -40,7 +56,7 @@ async function initializeXmtpClient() {
 	/* Sync the conversations from the network to update the local db */
 	console.log('✓ Syncing client...');
 
-	await client.conversations.syncAll([ConsentState.Allowed]).catch((error) => {
+	await client.conversations.sync().catch((error) => {
 		console.error('Error syncing client:', error);
 	});
 
@@ -60,20 +76,14 @@ export async function createConversationStream(client: XmtpClient): Promise<void
 	client.conversations.stream((err, conversation) => {
 		if (err) {
 			console.error('Error in conversation stream:', err);
-
-			// make sure we sync before retrying
-			client.conversations.syncAll().catch((error) => {
-				console.error('Error syncing client:', error);
-			});
-
-			retryStream(client, createConversationStream);
+			//
 			return;
 		}
 
 		console.log(`New conversation detected: ${conversation?.id}`);
 		if (conversation) {
-			// Reset retry counter on successful conversation detection
-			conversationRetries = MAX_RETRIES;
+			// Reset restart counter on successful conversation detection
+			conversationStreamTracker.restartCount = Math.max(0, conversationStreamTracker.restartCount - 1);
 			try {
 				void sendWelcomeMessage(conversation, client);
 			} catch (error) {
@@ -102,84 +112,119 @@ async function createMessageStream(client: XmtpClient) {
 function onMessage(err: Error | null, client: XmtpClient, message?: DecodedMessage) {
 	if (err) {
 		console.error('Error in message stream:', err);
-		retryStream(client, createMessageStream);
+		handleStreamFailureWithBackoff(client, createMessageStream, messageStreamTracker);
 		return;
 	}
 
 	if (!message) return;
 
-	// reset count when we successfully process a message
-	retries = MAX_RETRIES;
+	// Reset restart counter on successful message processing
+	messageStreamTracker.restartCount = Math.max(0, messageStreamTracker.restartCount - 1);
 	handleMessage(message, client).catch((error) => {
 		console.error('Error in message listener:', { message, error });
 	});
 }
 
 /**
- * Calculate exponential backoff delay with jitter
- * @param attempt - The current attempt number (1-based)
- * @returns Delay in milliseconds
+ * Enhanced stream failure handling with circuit breaker pattern
+ * Implements rate limiting and extended backoff instead of process death
  */
-function calculateBackoffDelay(attempt: number): number {
-	const exponentialDelay = BASE_RETRY_DELAY * Math.pow(2, attempt - 1);
+async function handleStreamFailureWithBackoff(
+	client: XmtpClient,
+	streamFunction: (client: XmtpClient) => Promise<void>,
+	tracker: StreamFailureTracker,
+): Promise<void> {
+	const now = Date.now();
+	const timeSinceLastRestart = now - tracker.lastRestart;
 
-	// Apply maximum delay cap
-	const cappedDelay = Math.min(exponentialDelay, MAX_RETRY_DELAY);
+	// Reset counter if more than 1 hour has passed
+	if (timeSinceLastRestart > 60 * 60 * 1000) {
+		tracker.restartCount = 0;
+		tracker.isInExtendedBackoff = false;
+	}
 
-	// Add jitter (±25% randomization) to prevent thundering herd
-	const jitter = cappedDelay * 0.25 * (Math.random() * 2 - 1);
+	// Circuit breaker: Too many restarts in the last hour
+	if (tracker.restartCount >= MAX_STREAM_RESTARTS_PER_HOUR) {
+		if (!tracker.isInExtendedBackoff) {
+			console.log('🚨 Circuit breaker: Too many stream restarts - entering extended backoff mode');
+			tracker.isInExtendedBackoff = true;
+		}
 
-	return Math.max(100, cappedDelay + jitter); // Minimum 100ms delay
+		// Extended backoff with progressive delay - never give up!
+		const backoffTime = Math.min(
+			EXTENDED_BACKOFF_CAP,
+			BACKOFF_BASE_MS * Math.pow(2, tracker.restartCount - MAX_STREAM_RESTARTS_PER_HOUR),
+		);
+
+		console.log(`⏳ Extended backoff for ${(backoffTime / 1000).toFixed(1)}s (attempt ${tracker.restartCount + 1})`);
+
+		setTimeout(async () => {
+			console.log('🔄 Extended backoff complete - attempting restart');
+			tracker.restartCount = 0; // Reset for fresh start
+			tracker.isInExtendedBackoff = false;
+			await handleStreamRestart(client, streamFunction, tracker);
+		}, backoffTime);
+		return;
+	}
+
+	// Normal exponential backoff with jitter
+	tracker.restartCount++;
+	tracker.lastRestart = now;
+
+	const baseDelay = BACKOFF_BASE_MS * Math.pow(2, tracker.restartCount - 1);
+	const jitter = Math.random() * 1000;
+	const delay = Math.min(baseDelay + jitter, MAX_RETRY_DELAY);
+
+	console.log(
+		`🔄 Stream restart ${tracker.restartCount}/${MAX_STREAM_RESTARTS_PER_HOUR} in ${(delay / 1000).toFixed(1)}s`,
+	);
+
+	setTimeout(async () => {
+		await handleStreamRestart(client, streamFunction, tracker);
+	}, delay);
 }
 
 /**
- * Retry the stream with exponential backoff
- * @param client - The XMTP client instance
- * @param stream - The stream function to retry
+ * Handle the actual stream restart with proper error handling
  */
-function retryStream(client: XmtpClient, stream: (client: XmtpClient) => Promise<void>) {
-	if (retries > 0) {
-		const currentAttempt = MAX_RETRIES - retries + 1;
-		const delayMs = calculateBackoffDelay(currentAttempt);
+async function handleStreamRestart(
+	client: XmtpClient,
+	streamFunction: (client: XmtpClient) => Promise<void>,
+	tracker: StreamFailureTracker,
+): Promise<void> {
+	try {
+		console.log('🔄 Attempting stream restart...');
 
-		console.log(`🔄 Exponential backoff retry:`);
-		console.log(`   • Attempt: ${currentAttempt}/${MAX_RETRIES}`);
-		console.log(`   • Delay: ${(delayMs / 1000).toFixed(1)}s`);
-		console.log(`   • Retries left: ${retries}`);
+		// Sync client before restarting stream
+		await client.conversations.sync().catch((error) => {
+			console.error('Error syncing client during restart:', error);
+		});
 
-		retries--;
-		setTimeout(async () => {
-			console.log(`⏰ Message retry timeout expired, attempting to reconnect...`);
+		await streamFunction(client);
+		console.log('✅ Stream restarted successfully');
 
-			// we may have missed some messages, so we need to sync the client again
-			await client.conversations.syncAll([ConsentState.Allowed]).catch((error) => {
-				console.error('Error syncing client:', error);
-			});
-
-			await stream(client);
-		}, delayMs);
-	} else {
-		console.log('❌ Max retries reached, ending process');
-		process.exit(1);
+		// Reset counter on successful restart
+		if (tracker.restartCount > 0) {
+			tracker.restartCount = Math.max(0, tracker.restartCount - 1);
+		}
+	} catch (restartError) {
+		console.error('❌ Failed to restart stream:', restartError);
+		// Trigger another backoff cycle instead of dying
+		await handleStreamFailureWithBackoff(client, streamFunction, tracker);
 	}
 }
 
 function onMessageStreamFail(client: XmtpClient) {
 	return () => {
 		console.log('Message stream failed');
-		retryStream(client, createMessageStream);
+		handleStreamFailureWithBackoff(client, createMessageStream, messageStreamTracker);
 	};
 }
 
 function onConversationStreamFail(client: XmtpClient) {
 	return () => {
 		console.log('Conversation stream failed');
-
-		// sync before starting the stream
-		client.conversations
-			.sync()
-			.then(() => retryStream(client, createConversationStream))
-			.catch((error) => console.error('Error syncing client:', error));
+		handleStreamFailureWithBackoff(client, createConversationStream, conversationStreamTracker);
 	};
 }
 
@@ -193,8 +238,27 @@ async function main() {
 	await Promise.all([createMessageStream(client), createConversationStream(client)]);
 }
 
-// Start the bot
-main().catch((error) => {
-	console.error('Failed to start bot:', error);
-	process.exit(1);
+// Start the bot with graceful error handling
+main().catch(async (error) => {
+	console.error('❌ Failed to start bot:', error);
+	console.log('🔄 Attempting to restart bot in 10 seconds...');
+
+	// Wait 10 seconds then try to restart the entire bot
+	setTimeout(() => {
+		console.log('🚀 Restarting bot...');
+		main().catch((restartError) => {
+			console.error('❌ Failed to restart bot:', restartError);
+			console.log('🔄 Will retry again in 30 seconds...');
+
+			// Exponentially increase restart delay for main process failures
+			setTimeout(() => {
+				console.log('🚀 Final restart attempt...');
+				main().catch((finalError) => {
+					console.error('💀 Critical failure - bot cannot start:', finalError);
+					console.log('🆘 Manual intervention required');
+					// Still don't exit - let the process manager handle it
+				});
+			}, 30000);
+		});
+	}, 10000);
 });
