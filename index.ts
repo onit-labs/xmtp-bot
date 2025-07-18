@@ -61,6 +61,8 @@ export async function createConversationStream(client: XmtpClient): Promise<void
 		for await (const conversation of client.conversations.stream()) {
 			console.log(`New conversation detected: ${conversation?.id}`);
 			if (conversation) {
+				// Reset retry counter on successful conversation detection
+				conversationRetries = MAX_RETRIES;
 				try {
 					await sendWelcomeMessage(conversation, client);
 				} catch (error) {
@@ -91,9 +93,6 @@ function retryConversationStream(client: XmtpClient) {
 		conversationRetries--;
 		setTimeout(async () => {
 			console.log(`⏰ Conversation retry timeout expired, attempting to reconnect...`);
-
-			// Reset retries on successful restart
-			conversationRetries = MAX_RETRIES;
 
 			await createConversationStream(client);
 		}, delayMs);

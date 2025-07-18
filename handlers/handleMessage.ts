@@ -20,6 +20,7 @@ function isFormattedMessage(message: XmtpMessage): message is XmtpMessage<true> 
  */
 export async function handleMessage(message: XmtpMessage, client: XmtpClient) {
 	let conversation: XmtpConversation | null = null;
+
 	try {
 		const senderInboxId = message.senderInboxId;
 		const botInboxId = client.inboxId.toLowerCase();
