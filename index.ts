@@ -56,50 +56,25 @@ async function initializeXmtpClient() {
 export async function createConversationStream(client: XmtpClient): Promise<void> {
 	console.log('📞 Starting conversation listener for welcome messages...');
 
-	try {
-		// Stream new conversations
-		for await (const conversation of client.conversations.stream()) {
-			console.log(`New conversation detected: ${conversation?.id}`);
-			if (conversation) {
-				// Reset retry counter on successful conversation detection
-				conversationRetries = MAX_RETRIES;
-				try {
-					await sendWelcomeMessage(conversation, client);
-				} catch (error) {
-					console.error('Error in conversation listener:', { conversation, error });
-				}
+	// Stream new conversations
+	client.conversations.stream((err, conversation) => {
+		if (err) {
+			console.error('Error in conversation stream:', err);
+			retryStream(client, createConversationStream);
+			return;
+		}
+
+		console.log(`New conversation detected: ${conversation?.id}`);
+		if (conversation) {
+			// Reset retry counter on successful conversation detection
+			conversationRetries = MAX_RETRIES;
+			try {
+				void sendWelcomeMessage(conversation, client);
+			} catch (error) {
+				console.error('Error in conversation listener:', { conversation, error });
 			}
 		}
-	} catch (error) {
-		console.error('Error in conversation stream:', error);
-		retryConversationStream(client);
-	}
-}
-
-/**
- * Retry the conversation stream with exponential backoff
- * @param client - The XMTP client instance
- */
-function retryConversationStream(client: XmtpClient) {
-	if (conversationRetries > 0) {
-		const currentAttempt = MAX_RETRIES - conversationRetries + 1;
-		const delayMs = calculateBackoffDelay(currentAttempt);
-
-		console.log(`🔄 Conversation stream exponential backoff retry:`);
-		console.log(`   • Attempt: ${currentAttempt}/${MAX_RETRIES}`);
-		console.log(`   • Delay: ${(delayMs / 1000).toFixed(1)}s`);
-		console.log(`   • Retries left: ${conversationRetries}`);
-
-		conversationRetries--;
-		setTimeout(async () => {
-			console.log(`⏰ Conversation retry timeout expired, attempting to reconnect...`);
-
-			await createConversationStream(client);
-		}, delayMs);
-	} else {
-		console.log('❌ Max conversation retries reached, ending process');
-		process.exit(1);
-	}
+	}, onConversationStreamFail(client));
 }
 
 /**
@@ -114,14 +89,14 @@ async function createMessageStream(client: XmtpClient) {
 		(err, message) => onMessage(err, client, message),
 		undefined,
 		undefined,
-		onFail(client),
+		onMessageStreamFail(client),
 	);
 }
 
 function onMessage(err: Error | null, client: XmtpClient, message?: DecodedMessage) {
 	if (err) {
 		console.error('Error in message stream:', err);
-		retryMessageStream(client);
+		retryStream(client, createMessageStream);
 		return;
 	}
 
@@ -152,10 +127,11 @@ function calculateBackoffDelay(attempt: number): number {
 }
 
 /**
- * Retry the message stream with exponential backoff
+ * Retry the stream with exponential backoff
  * @param client - The XMTP client instance
+ * @param stream - The stream function to retry
  */
-function retryMessageStream(client: XmtpClient) {
+function retryStream(client: XmtpClient, stream: (client: XmtpClient) => Promise<void>) {
 	if (retries > 0) {
 		const currentAttempt = MAX_RETRIES - retries + 1;
 		const delayMs = calculateBackoffDelay(currentAttempt);
@@ -174,7 +150,7 @@ function retryMessageStream(client: XmtpClient) {
 				console.error('Error syncing client:', error);
 			});
 
-			await createMessageStream(client);
+			await stream(client);
 		}, delayMs);
 	} else {
 		console.log('❌ Max retries reached, ending process');
@@ -182,10 +158,22 @@ function retryMessageStream(client: XmtpClient) {
 	}
 }
 
-function onFail(client: XmtpClient) {
+function onMessageStreamFail(client: XmtpClient) {
 	return () => {
-		console.log('Stream failed');
-		retryMessageStream(client);
+		console.log('Message stream failed');
+		retryStream(client, createMessageStream);
+	};
+}
+
+function onConversationStreamFail(client: XmtpClient) {
+	return () => {
+		console.log('Conversation stream failed');
+
+		// sync before starting the stream
+		client.conversations
+			.syncAll([ConsentState.Allowed])
+			.then(() => retryStream(client, createConversationStream))
+			.catch((error) => console.error('Error syncing client:', error));
 	};
 }
 
