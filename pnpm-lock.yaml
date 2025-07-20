@@ -11,9 +11,15 @@ importers:
       '@xmtp/content-type-reaction':
         specifier: ^2.0.2
         version: 2.0.2
+      '@xmtp/node-bindings':
+        specifier: ^1.3.0
+        version: 1.3.0
       '@xmtp/node-sdk':
-        specifier: ^3.1.2
-        version: 3.1.2
+        specifier: ^3.2.0
+        version: 3.2.0
+      '@xmtp/proto':
+        specifier: ^3.85.0
+        version: 3.85.0
       common-tags:
         specifier: ^1.8.2
         version: 1.8.2
@@ -132,16 +138,16 @@ packages:
   '@xmtp/content-type-text@2.0.2':
     resolution: {integrity: sha512-nlRufOYPrG5sNbruNPCsb6Qk9/jmJ5lMooPsZEo4Dbwda/2S4bSvrrIncT6if7M2SCha3hxtlgJlFGeTtHy4gQ==}
 
-  '@xmtp/node-bindings@1.2.8':
-    resolution: {integrity: sha512-BMJpRoJBfFX5gYEeKhsqTzZGZlnj+A30paVOXXRY4KS6+7g0/f9X29iyvQzD9F80sET1FwB1Xj8SfRTNBIfgDA==}
+  '@xmtp/node-bindings@1.3.0':
+    resolution: {integrity: sha512-15XTZc/zvoyXNwFgRKxTdmAEbX57WItxh+65EaV6iFyOcT3fZ5llPF4zR/WbZurdlWWrVxBKmVsYFGfkTppi7g==}
     engines: {node: '>=18'}
 
-  '@xmtp/node-sdk@3.1.2':
-    resolution: {integrity: sha512-ra8U0roY1GVzYNt3E0Odx/3Em6TEtGZpnbTz5LO66QjcTXt+NA39sahHohAPqkMRpO5ja6uzWSBq6Y2ijkdI4A==}
+  '@xmtp/node-sdk@3.2.0':
+    resolution: {integrity: sha512-lcjEfAf5z6AG6j3cjFXJUhGEkB9ylVx1rxPaewlAg3UMZWF4nFcVP2s3Rwf0dZgFIzaI2BlvRr4a+qaw1PuMvg==}
     engines: {node: '>=20'}
 
-  '@xmtp/proto@3.83.0':
-    resolution: {integrity: sha512-r7ft3rBtg7hIESH3KygjI4lXazP7ZacA1HB7z2dtm3ALuN2GEvihhGPzO8EJfzDjRIFB8CpHMZS0e8fs2NUUPw==}
+  '@xmtp/proto@3.85.0':
+    resolution: {integrity: sha512-UT9QHPBvKN4cEO3SlqeQJZHnAk69m/erzIviYF86BoUcVFgYx+nwQ6U6rI0rIULpXd61A+S/NB2Xl8W85uKuGw==}
 
   abitype@1.0.8:
     resolution: {integrity: sha512-ZeiI6h3GnW06uYDLx0etQtX/p8E24UaHHBj57RSjK7YBFe7iuVn07EDpOeP451D06sF27VOz9JJPlIKJmXgkEg==}
@@ -316,11 +322,11 @@ snapshots:
   '@xmtp/content-type-group-updated@2.0.2':
     dependencies:
       '@xmtp/content-type-primitives': 2.0.2
-      '@xmtp/proto': 3.83.0
+      '@xmtp/proto': 3.85.0
 
   '@xmtp/content-type-primitives@2.0.2':
     dependencies:
-      '@xmtp/proto': 3.83.0
+      '@xmtp/proto': 3.85.0
 
   '@xmtp/content-type-reaction@2.0.2':
     dependencies:
@@ -330,16 +336,16 @@ snapshots:
     dependencies:
       '@xmtp/content-type-primitives': 2.0.2
 
-  '@xmtp/node-bindings@1.2.8': {}
+  '@xmtp/node-bindings@1.3.0': {}
 
-  '@xmtp/node-sdk@3.1.2':
+  '@xmtp/node-sdk@3.2.0':
     dependencies:
       '@xmtp/content-type-group-updated': 2.0.2
       '@xmtp/content-type-primitives': 2.0.2
       '@xmtp/content-type-text': 2.0.2
-      '@xmtp/node-bindings': 1.2.8
+      '@xmtp/node-bindings': 1.3.0
 
-  '@xmtp/proto@3.83.0':
+  '@xmtp/proto@3.85.0':
     dependencies:
       long: 5.3.2
       protobufjs: 7.5.3
