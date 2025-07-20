@@ -7,7 +7,7 @@ import type { XmtpConversation } from '#clients/xmtp.ts';
  * @param conversation - The conversation to send the welcome message to
  * @param client - The XMTP client instance
  */
-export async function sendWelcomeMessage(conversation: Pick<XmtpConversation, 'metadata' | 'send'>): Promise<void> {
+export async function sendWelcomeMessage(conversation: XmtpConversation): Promise<void> {
 	// Get conversation metadata to determine if it's a DM or group
 	const metadata = await conversation.metadata();
 	const isDirectMessage = metadata?.conversationType === 'dm';
