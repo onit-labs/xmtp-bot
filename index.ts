@@ -436,6 +436,9 @@ async function main() {
 	// Start both message listener and conversation listener in parallel
 	console.log('Starting listeners...');
 
+	// listing before starting the streams seems to be a good way to ensure that old conversations are synced
+	await client.conversations.list();
+
 	// Starting the message stream syncs the conversations from the network to update the local db so we don't need to do it here
 	await Promise.all([createMessageStream(client), createConversationStream(client, nodeClient)]);
 }
