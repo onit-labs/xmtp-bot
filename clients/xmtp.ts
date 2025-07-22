@@ -1,10 +1,26 @@
-import { IdentifierKind } from '@xmtp/node-sdk';
+import { join } from 'node:path';
+import process from 'node:process';
+import {
+	createClient as createNodeClient,
+	LogLevel,
+	type LogOptions,
+	type Identifier as NodeIdentifier,
+	SyncWorkerMode,
+} from '@xmtp/node-bindings';
+import {
+	ApiUrls,
+	generateInboxId,
+	getInboxIdForIdentifier,
+	HistorySyncUrls,
+	type Identifier,
+	IdentifierKind,
+} from '@xmtp/node-sdk';
 import { createWalletClient, http, toBytes } from 'viem';
 import { privateKeyToAccount } from 'viem/accounts';
 import { sepolia } from 'viem/chains';
 
 import type { Reaction } from '@xmtp/content-type-reaction';
-import type { Client, DecodedMessage, Signer } from '@xmtp/node-sdk';
+import type { Client, ClientOptions, DecodedMessage, Signer } from '@xmtp/node-sdk';
 import type { mlsTranscriptMessages } from '@xmtp/proto';
 
 type GroupUpdated = mlsTranscriptMessages.GroupUpdated;
@@ -53,9 +69,11 @@ export const createSigner = (key: string): Signer => {
 	};
 };
 
-export const logAgentDetails = async (clients: Client | Client[]): Promise<void> => {
+// biome-ignore lint/suspicious/noExplicitAny: the content type doesn't matter
+export const logAgentDetails = async (clients: Client<any> | Client<any>[]): Promise<void> => {
 	const clientArray = Array.isArray(clients) ? clients : [clients];
-	const clientsByAddress = clientArray.reduce<Record<string, Client[]>>((acc, client) => {
+	// biome-ignore lint/suspicious/noExplicitAny: the content type doesn't matter
+	const clientsByAddress = clientArray.reduce<Record<string, Client<any>[]>>((acc, client) => {
 		const address = client.accountIdentifier?.identifier as string;
 		acc[address] = acc[address] ?? [];
 		acc[address].push(client);
@@ -65,7 +83,7 @@ export const logAgentDetails = async (clients: Client | Client[]): Promise<void>
 	for (const [address, clientGroup] of Object.entries(clientsByAddress)) {
 		const firstClient = clientGroup[0]!;
 		const inboxId = firstClient.inboxId;
-		const environments = clientGroup.map((c: Client) => c.options?.env ?? 'dev').join(', ');
+		const environments = clientGroup.map((c) => c.options?.env ?? 'dev').join(', ');
 		console.log(`\x1b[38;2;252;76;52m
         ██╗  ██╗███╗   ███╗████████╗██████╗ 
         ╚██╗██╔╝████╗ ████║╚══██╔══╝██╔══██╗
@@ -89,4 +107,32 @@ export const logAgentDetails = async (clients: Client | Client[]): Promise<void>
     • Networks: ${environments}
     ${urls.map((url) => `• URL: ${url}`).join('\n')}`);
 	}
+};
+
+export const createClient = async (identifier: Identifier, options?: ClientOptions) => {
+	const env = options?.env || 'dev';
+	const host = options?.apiUrl || ApiUrls[env];
+	const isSecure = host.startsWith('https');
+	const inboxId = (await getInboxIdForIdentifier(identifier, env)) || generateInboxId(identifier);
+	const dbPath = options?.dbPath === undefined ? join(process.cwd(), `xmtp-${env}-${inboxId}.db3`) : options.dbPath;
+	const logOptions: LogOptions = {
+		structured: options?.structuredLogging ?? false,
+		// @ts-expect-error - LogLevel.off is fine
+		level: options?.loggingLevel ?? LogLevel.off,
+	};
+	const historySyncUrl = options?.historySyncUrl === undefined ? HistorySyncUrls[env] : options.historySyncUrl;
+
+	const deviceSyncWorkerMode = options?.disableDeviceSync ? SyncWorkerMode.disabled : SyncWorkerMode.enabled;
+
+	return createNodeClient(
+		host,
+		isSecure,
+		dbPath,
+		inboxId,
+		identifier as unknown as NodeIdentifier,
+		options?.dbEncryptionKey,
+		historySyncUrl,
+		deviceSyncWorkerMode,
+		logOptions,
+	);
 };
