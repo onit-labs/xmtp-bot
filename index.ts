@@ -1,4 +1,4 @@
-import { createClient, createSigner, logAgentDetails } from '#clients/xmtp.ts';
+import { createSigner, logAgentDetails } from '#clients/xmtp.ts';
 import { ENCRYPTION_KEY, WALLET_KEY, XMTP_ENV } from '#constants.ts';
 import { sendWelcomeMessage } from '#handlers/handleConversation.ts';
 import { handleMessage } from '#handlers/handleMessage.ts';
@@ -10,12 +10,10 @@ import { toBytes } from 'viem/utils';
 import type { XmtpEnv } from '@xmtp/node-sdk';
 import type { XmtpClient } from '#clients/xmtp.ts';
 
-type XmtpNodeClient = Awaited<ReturnType<typeof createClient>>;
-
 /**
  * Initialize the XMTP client.
  *
- * @returns An initialized XMTP Client instance and Node Client
+ * @returns An initialized XMTP Client instance
  */
 async function initializeXmtpClient() {
 	/* Create the signer using viem and parse the encryption key for the local db */
@@ -28,17 +26,14 @@ async function initializeXmtpClient() {
 		codecs: [new ReactionCodec()],
 	};
 
-	const identifier = await signer.getIdentifier();
-
-	/* Initialize both the xmtp client and node client */
+	/* Initialize the xmtp client */
 	const client = await Client.create(signer, clientOptions);
-	const nodeClient = await createClient(identifier, clientOptions);
 
 	void logAgentDetails(client);
 
 	console.log(`📝 Agent Inbox ID: ${client.inboxId}`);
 
-	return { client, nodeClient };
+	return { client };
 }
 
 
@@ -112,85 +107,62 @@ async function createMessageStream(client: XmtpClient) {
  * Start listening for new conversations using v4.0.0 StreamOptions API
  * 
  * @param client - The XMTP client instance
- * @param nodeClient - The node client instance
  */
-async function createConversationStream(
-	client: XmtpClient,
-	nodeClient: XmtpNodeClient,
-) {
+async function createConversationStream(client: XmtpClient) {
 	console.log('📞 Creating conversation stream with v4.0.0 API...');
 
-	// Sync conversations first
-	const conversations = nodeClient.conversations();
-	await conversations.sync();
-	console.log('✅ Conversations synced');
+	// TODO update this tracking and use storage
+	// For now, detect new conversations by monitoring streamAllMessages for new conversation IDs
+	const seenConversations = new Set<string>();
 
-	// Create the conversation stream with v4.0.0 StreamOptions
-	const stream = conversations.stream(
-		async (err, conversation) => {
-			if (err) {
-				console.error('⚠️ Conversation stream error (will continue):', err.message || err);
-				return;
-			}
+	// Initialize with existing conversations
+	const existingConversations = await client.conversations.list();
+	existingConversations.forEach(conv => seenConversations.add(conv.id));
+	console.log(`✅ Initialized with ${existingConversations.length} existing conversations`);
 
-			if (!conversation) {
-				console.log('📭 Received null conversation - ignoring');
-				return;
-			}
+	// Monitor for new conversations via message stream
+	// This is a workaround until we confirm conversation streaming in main client
+	const conversationDetectionStream = await client.conversations.streamAllMessages({
+		onValue: async (message) => {
+			const conversationId = message.conversationId;
 
-			try {
-				const id = conversation.id();
+			if (!seenConversations.has(conversationId)) {
+				seenConversations.add(conversationId);
 
-				console.log('📥 New conversation received:', {
-					conversationId: id,
+				console.log('📥 New conversation detected via message:', {
+					conversationId: conversationId,
 				});
 
-				const xmtpConversation = await client.conversations.getConversationById(id).catch((error) => {
-					console.error('Error getting conversation by id:', error);
-					return null;
-				});
-
-				if (!xmtpConversation) {
-					console.warn('⚠️ Conversation not found - continuing stream');
-					return;
+				try {
+					const xmtpConversation = await client.conversations.getConversationById(conversationId);
+					if (xmtpConversation) {
+						await sendWelcomeMessage(xmtpConversation);
+					}
+				} catch (error) {
+					console.error('❌ Error processing detected conversation:', error);
 				}
-
-				await sendWelcomeMessage(xmtpConversation);
-			} catch (error: unknown) {
-				const errorMessage = error instanceof Error ? error.message : String(error);
-				console.error('❌ Error processing new conversation:', errorMessage);
-
-				if (errorMessage.includes('group with welcome id')) {
-					console.warn('⚠️ Group welcome message error - continuing stream');
-					return;
-				}
-
-				if (errorMessage.includes('conversation not found') || errorMessage.includes('invalid conversation')) {
-					console.warn('⚠️ Invalid conversation error - continuing stream');
-					return;
-				}
-
-				// For unknown errors, log more details but continue processing
-				console.error('❌ Unknown conversation error type - continuing stream:', {
-					conversationId: conversation.id(),
-					error: errorMessage,
-				});
 			}
 		},
-		() => {
-			console.log('🏁 Conversation stream ended');
-		}
-	);
+		onError: (error) => {
+			console.error('⚠️ Conversation detection stream error:', error);
+		},
+		onRestart: () => {
+			console.log('🔄 Conversation detection stream restarted');
+		},
+		retryAttempts: 6,
+		retryDelay: 10000,
+		retryOnFail: true,
+	});
 
-	console.log('✅ XMTP conversation stream active - waiting for new conversations...');
+	console.log('✅ XMTP conversation detection active - monitoring message stream for new conversations...');
 
-	return stream;
+	return conversationDetectionStream;
 }
 
 async function main() {
 	console.log('Initializing Onit XMTP Agent');
 
-	const { client, nodeClient } = await initializeXmtpClient();
+	const { client } = await initializeXmtpClient();
 
 	// Start both message and conversation streams
 	console.log('Starting streams...');
@@ -201,7 +173,7 @@ async function main() {
 	// Start both streams in parallel with v4.0.0 built-in retry functionality
 	await Promise.all([
 		createMessageStream(client),
-		createConversationStream(client, nodeClient)
+		createConversationStream(client)
 	]);
 }
 
