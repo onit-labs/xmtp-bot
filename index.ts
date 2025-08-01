@@ -36,8 +36,6 @@ async function initializeXmtpClient() {
 	return { client };
 }
 
-
-
 /**
  * Start listening for XMTP messages using v4.0.0 StreamOptions API
  *
@@ -105,7 +103,7 @@ async function createMessageStream(client: XmtpClient) {
 
 /**
  * Start listening for new conversations using v4.0.0 StreamOptions API
- * 
+ *
  * @param client - The XMTP client instance
  */
 async function createConversationStream(client: XmtpClient) {
@@ -117,27 +115,23 @@ async function createConversationStream(client: XmtpClient) {
 
 	// Initialize with existing conversations
 	const existingConversations = await client.conversations.list();
-	existingConversations.forEach(conv => seenConversations.add(conv.id));
+	existingConversations.forEach((conv) => seenConversations.add(conv.id));
 	console.log(`✅ Initialized with ${existingConversations.length} existing conversations`);
 
 	// Monitor for new conversations via message stream
 	// This is a workaround until we confirm conversation streaming in main client
-	const conversationDetectionStream = await client.conversations.streamAllMessages({
-		onValue: async (message) => {
-			const conversationId = message.conversationId;
+	const conversationDetectionStream = await client.conversations.stream({
+		onValue: async (conversation) => {
+			if (!conversation) return;
 
-			if (!seenConversations.has(conversationId)) {
-				seenConversations.add(conversationId);
+			const isNewConversation = !seenConversations.has(conversation.id);
 
-				console.log('📥 New conversation detected via message:', {
-					conversationId: conversationId,
-				});
+			if (isNewConversation) {
+				seenConversations.add(conversation.id);
 
 				try {
-					const xmtpConversation = await client.conversations.getConversationById(conversationId);
-					if (xmtpConversation) {
-						await sendWelcomeMessage(xmtpConversation);
-					}
+					console.log('📥 New conversation detected via message:', { conversationId: conversation.id });
+					await sendWelcomeMessage(conversation);
 				} catch (error) {
 					console.error('❌ Error processing detected conversation:', error);
 				}
@@ -171,10 +165,7 @@ async function main() {
 	await client.conversations.list();
 
 	// Start both streams in parallel with v4.0.0 built-in retry functionality
-	await Promise.all([
-		createMessageStream(client),
-		createConversationStream(client)
-	]);
+	await Promise.all([createMessageStream(client), createConversationStream(client)]);
 }
 
 // Start the bot with basic error handling
