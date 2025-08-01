@@ -15,8 +15,8 @@ importers:
         specifier: ^1.3.0
         version: 1.3.0
       '@xmtp/node-sdk':
-        specifier: ^3.2.0
-        version: 3.2.0
+        specifier: ^4.0.0
+        version: 4.0.1
       '@xmtp/proto':
         specifier: ^3.85.0
         version: 3.85.0
@@ -142,8 +142,12 @@ packages:
     resolution: {integrity: sha512-15XTZc/zvoyXNwFgRKxTdmAEbX57WItxh+65EaV6iFyOcT3fZ5llPF4zR/WbZurdlWWrVxBKmVsYFGfkTppi7g==}
     engines: {node: '>=18'}
 
-  '@xmtp/node-sdk@3.2.0':
-    resolution: {integrity: sha512-lcjEfAf5z6AG6j3cjFXJUhGEkB9ylVx1rxPaewlAg3UMZWF4nFcVP2s3Rwf0dZgFIzaI2BlvRr4a+qaw1PuMvg==}
+  '@xmtp/node-bindings@1.3.4':
+    resolution: {integrity: sha512-kGU6EfafZakCAZTxNoKacxFP5OdjDnzYcxc9KwMhfAuu3txDiNz49NBbwRqXwYeV0bTmvHCUe71g5AJ5vWcZwg==}
+    engines: {node: '>=18'}
+
+  '@xmtp/node-sdk@4.0.1':
+    resolution: {integrity: sha512-TX0sJrtgKBVN0l4JlkGZoH2tw8gnxQyRzgoZfx84CbIgIyxKeeDjl4xocn+sBUpwna30E4ihNLph1QOhqFdMGg==}
     engines: {node: '>=20'}
 
   '@xmtp/proto@3.85.0':
@@ -338,12 +342,14 @@ snapshots:
 
   '@xmtp/node-bindings@1.3.0': {}
 
-  '@xmtp/node-sdk@3.2.0':
+  '@xmtp/node-bindings@1.3.4': {}
+
+  '@xmtp/node-sdk@4.0.1':
     dependencies:
       '@xmtp/content-type-group-updated': 2.0.2
       '@xmtp/content-type-primitives': 2.0.2
       '@xmtp/content-type-text': 2.0.2
-      '@xmtp/node-bindings': 1.3.0
+      '@xmtp/node-bindings': 1.3.4
 
   '@xmtp/proto@3.85.0':
     dependencies:
