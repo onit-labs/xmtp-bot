@@ -126,6 +126,16 @@ async function createConversationStream(client: XmtpClient) {
 
 			const isNewConversation = !seenConversations.has(conversation.id);
 
+			console.log('conversation.createdAt', conversation.createdAt.getTime());
+			console.log('DO_NOT_WELCOME_MESSAGE_BEFORE', DO_NOT_WELCOME_MESSAGE_BEFORE);
+			if (conversation.createdAt.getTime() < DO_NOT_WELCOME_MESSAGE_BEFORE) {
+				console.log(
+					'🔄 Skipping welcome message for historical conversation',
+					await conversation.metadata().catch(() => null),
+				);
+				return;
+			}
+
 			if (isNewConversation) {
 				seenConversations.add(conversation.id);
 
@@ -153,8 +163,13 @@ async function createConversationStream(client: XmtpClient) {
 	return conversationDetectionStream;
 }
 
+let DO_NOT_WELCOME_MESSAGE_BEFORE = 0;
+
 async function main() {
 	console.log('Initializing Onit XMTP Agent');
+
+	// for now we just don't welcome message any historical conversations
+	DO_NOT_WELCOME_MESSAGE_BEFORE = Date.now();
 
 	const { client } = await initializeXmtpClient();
 
